@@ -1,6 +1,7 @@
 package com.waytube.app
 
 import android.app.Application
+import com.waytube.app.channel.di.channelModule
 import com.waytube.app.network.di.networkModule
 import com.waytube.app.search.di.searchModule
 import org.koin.android.ext.android.get
@@ -17,6 +18,7 @@ class MainApplication : Application() {
             androidContext(this@MainApplication)
             androidLogger()
             modules(
+                channelModule,
                 networkModule,
                 searchModule
             )

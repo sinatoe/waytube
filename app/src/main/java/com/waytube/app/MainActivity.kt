@@ -5,8 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.waytube.app.common.ui.AppTheme
-import com.waytube.app.search.ui.SearchScreen
-import org.koin.androidx.compose.koinViewModel
+import com.waytube.app.navigation.ui.NavigationHost
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                SearchScreen(viewModel = koinViewModel())
+                NavigationHost()
             }
         }
     }

@@ -40,7 +40,8 @@ fun StreamInfoItem.toVideoItem(): VideoItem? {
 fun ChannelInfoItem.toChannelItem(): ChannelItem = ChannelItem(
     id = YoutubeChannelLinkHandlerFactory.getInstance().getId(url),
     name = name,
-    avatarUrl = thumbnails.maxBy { it.height }.url
+    avatarUrl = thumbnails.maxBy { it.height }.url,
+    subscriberCount = subscriberCount.takeIf { it != -1L }
 )
 
 fun PlaylistInfoItem.toPlaylistItem(): PlaylistItem? =

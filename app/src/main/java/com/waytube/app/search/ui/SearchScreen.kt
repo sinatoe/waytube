@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
+import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ChannelItemCard
 import com.waytube.app.common.ui.PlaylistItemCard
 import com.waytube.app.common.ui.VideoItemCard
@@ -44,7 +45,10 @@ import com.waytube.app.search.domain.SearchResult
 import kotlinx.coroutines.launch
 
 @Composable
-fun SearchScreen(viewModel: SearchViewModel) {
+fun SearchScreen(
+    viewModel: SearchViewModel,
+    onNavigateToChannel: (String) -> Unit
+) {
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val isQuerySubmitted by viewModel.isQuerySubmitted.collectAsStateWithLifecycle()
     val results = viewModel.results.collectAsLazyPagingItems()
@@ -59,7 +63,8 @@ fun SearchScreen(viewModel: SearchViewModel) {
         textFieldState = textFieldState,
         suggestions = { suggestions },
         results = { if (isQuerySubmitted) results else null },
-        onTrySubmit = viewModel::trySubmit
+        onTrySubmit = viewModel::trySubmit,
+        onNavigateToChannel = onNavigateToChannel
     )
 }
 
@@ -69,7 +74,8 @@ private fun SearchScreenContent(
     textFieldState: TextFieldState,
     suggestions: () -> List<String>,
     results: () -> LazyPagingItems<SearchResult>?,
-    onTrySubmit: (String) -> Boolean
+    onTrySubmit: (String) -> Boolean,
+    onNavigateToChannel: (String) -> Unit
 ) {
     val searchBarState = rememberSearchBarState()
     val scope = rememberCoroutineScope()
@@ -85,16 +91,11 @@ private fun SearchScreenContent(
             },
             leadingIcon = {
                 if (searchBarState.targetValue == SearchBarValue.Expanded) {
-                    IconButton(
+                    BackButton(
                         onClick = {
                             scope.launch { searchBarState.animateToCollapsed() }
                         }
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = stringResource(R.string.cd_back)
-                        )
-                    }
+                    )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.ic_search),
@@ -187,7 +188,7 @@ private fun SearchScreenContent(
                         is SearchResult.Channel -> {
                             ChannelItemCard(
                                 item = result.item,
-                                onClick = { /* TODO */ }
+                                onClick = { onNavigateToChannel(result.id) }
                             )
                         }
 

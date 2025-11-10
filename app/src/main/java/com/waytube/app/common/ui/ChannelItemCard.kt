@@ -8,9 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.waytube.app.R
 import com.waytube.app.common.domain.ChannelItem
 
 @Composable
@@ -39,6 +41,20 @@ fun ChannelItemCard(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.titleMedium
             )
+
+            item.subscriberCount?.let { subscriberCount ->
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.subscriber_count,
+                        subscriberCount.toPluralCount(),
+                        subscriberCount.toCompactString()
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     )
 }
@@ -51,7 +67,8 @@ private fun ChannelItemCardPreview() {
             item = ChannelItem(
                 id = "",
                 name = "Example channel",
-                avatarUrl = ""
+                avatarUrl = "",
+                subscriberCount = 12_345
             ),
             onClick = {}
         )
