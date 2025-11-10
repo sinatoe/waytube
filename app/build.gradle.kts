@@ -75,6 +75,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.koin.androidx.compose)
+    implementation(libs.material.kolor)
     implementation(libs.newpipe.extractor)
     implementation(libs.okhttp)
 }
