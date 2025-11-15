@@ -19,6 +19,7 @@ import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,11 +27,13 @@ import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
@@ -51,7 +54,14 @@ class VideoViewModel(
         initialValue = null
     )
 
+    private val positionMs = savedStateHandle.getMutableStateFlow<Long?>(
+        key = "position_ms",
+        initialValue = null
+    )
+
     private val fetchTrigger = MutableSharedFlow<Unit>()
+
+    private var isAutoplayRequested = false
 
     private val isStopRequested = MutableStateFlow(false)
 
@@ -139,9 +149,11 @@ class VideoViewModel(
                         .build()
 
                     player.apply {
-                        setMediaItem(mediaItem)
+                        positionMs.value?.let { positionMs ->
+                            setMediaItem(mediaItem, positionMs)
+                        } ?: setMediaItem(mediaItem)
                         prepare()
-                        play()
+                        playWhenReady = isAutoplayRequested
                     }
                 } else {
                     player.apply {
@@ -179,10 +191,54 @@ class VideoViewModel(
                     .build()
             }
             .launchIn(viewModelScope)
+
+        combine(
+            videoState.map { (it as? UiState.Data)?.data is Video.Regular }.distinctUntilChanged(),
+            player
+        ) { isRegularVideo, player -> isRegularVideo to player }
+            .flatMapLatest { (isRegularVideo, player) ->
+                if (isRegularVideo) {
+                    val eventsPosition = callbackFlow {
+                        val listener = object : Player.Listener {
+                            override fun onEvents(player: Player, events: Player.Events) {
+                                super.onEvents(player, events)
+
+                                if (
+                                    events.containsAny(
+                                        Player.EVENT_IS_PLAYING_CHANGED,
+                                        Player.EVENT_POSITION_DISCONTINUITY
+                                    )
+                                ) {
+                                    trySend(player.currentPosition)
+                                }
+                            }
+                        }
+
+                        player.addListener(listener)
+
+                        awaitClose { player.removeListener(listener) }
+                    }
+
+                    val pollingPosition = isPlaying.transformLatest { isPlaying ->
+                        while (isPlaying) {
+                            delay(1.seconds)
+                            emit(player.currentPosition)
+                        }
+                    }
+
+                    merge(eventsPosition, pollingPosition)
+                } else emptyFlow()
+            }
+            .onEach { positionMs.value = it }
+            .launchIn(viewModelScope)
     }
 
     fun play(id: String) {
-        videoId.value = id
+        if (videoId.value != id) {
+            videoId.value = id
+            positionMs.value = null
+            isAutoplayRequested = true
+        }
         isStopRequested.value = false
     }
 
