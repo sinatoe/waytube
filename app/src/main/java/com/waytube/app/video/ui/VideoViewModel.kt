@@ -20,6 +20,7 @@ import com.waytube.app.video.domain.VideoRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -106,17 +107,7 @@ class VideoViewModel(
 
     val isPlaying = player
         .flatMapLatest { player ->
-            callbackFlow {
-                val listener = object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        trySend(isPlaying)
-                    }
-                }
-
-                player.addListener(listener)
-
-                awaitClose { player.removeListener(listener) }
-            }
+            player.eventsFlow(Player.EVENT_IS_PLAYING_CHANGED) { it.isPlaying }
         }
         .stateIn(
             scope = viewModelScope,
@@ -198,26 +189,10 @@ class VideoViewModel(
         ) { isRegularVideo, player -> isRegularVideo to player }
             .flatMapLatest { (isRegularVideo, player) ->
                 if (isRegularVideo) {
-                    val eventsPosition = callbackFlow {
-                        val listener = object : Player.Listener {
-                            override fun onEvents(player: Player, events: Player.Events) {
-                                super.onEvents(player, events)
-
-                                if (
-                                    events.containsAny(
-                                        Player.EVENT_IS_PLAYING_CHANGED,
-                                        Player.EVENT_POSITION_DISCONTINUITY
-                                    )
-                                ) {
-                                    trySend(player.currentPosition)
-                                }
-                            }
-                        }
-
-                        player.addListener(listener)
-
-                        awaitClose { player.removeListener(listener) }
-                    }
+                    val eventsPosition = player.eventsFlow(
+                        Player.EVENT_IS_PLAYING_CHANGED,
+                        Player.EVENT_POSITION_DISCONTINUITY
+                    ) { it.currentPosition }
 
                     val pollingPosition = isPlaying.transformLatest { isPlaying ->
                         while (isPlaying) {
@@ -258,4 +233,23 @@ class VideoViewModel(
         super.onCleared()
         MediaController.releaseFuture(controllerFuture)
     }
+}
+
+private fun <T> Player.eventsFlow(
+    @Player.Event vararg triggerEvents: Int,
+    block: (Player) -> T
+): Flow<T> = callbackFlow {
+    send(block(this@eventsFlow))
+
+    val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.containsAny(*triggerEvents)) {
+                trySend(block(player))
+            }
+        }
+    }
+
+    addListener(listener)
+
+    awaitClose { removeListener(listener) }
 }
