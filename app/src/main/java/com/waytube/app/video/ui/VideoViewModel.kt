@@ -117,14 +117,19 @@ class VideoViewModel(
 
     init {
         combine(
-            videoState.map { (it as? UiState.Data)?.data }.distinctUntilChanged(),
+            videoState
+                .map { ((it as? UiState.Data)?.data as? Video.Content) }
+                .distinctUntilChanged(),
             player
         ) { video, player -> video to player }
             .onEach { (video, player) ->
                 if (video != null) {
                     val (uri, mimeType) = when (video) {
-                        is Video.Regular -> video.dashManifestUrl to MimeTypes.APPLICATION_MPD
-                        is Video.Live -> video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
+                        is Video.Content.Regular ->
+                            video.dashManifestUrl to MimeTypes.APPLICATION_MPD
+
+                        is Video.Content.Live ->
+                            video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
                     }
 
                     val mediaMetadata = MediaMetadata.Builder()
@@ -184,7 +189,9 @@ class VideoViewModel(
             .launchIn(viewModelScope)
 
         combine(
-            videoState.map { (it as? UiState.Data)?.data is Video.Regular }.distinctUntilChanged(),
+            videoState
+                .map { (it as? UiState.Data)?.data is Video.Content.Regular }
+                .distinctUntilChanged(),
             player
         ) { isRegularVideo, player -> isRegularVideo to player }
             .flatMapLatest { (isRegularVideo, player) ->

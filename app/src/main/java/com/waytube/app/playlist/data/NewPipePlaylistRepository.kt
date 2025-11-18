@@ -10,20 +10,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubePlaylistLinkHandlerFactory
 
 class NewPipePlaylistRepository : PlaylistRepository {
     override suspend fun getPlaylist(id: String): Result<Playlist> =
         runCatching {
-            val info = withContext(Dispatchers.IO) {
-                PlaylistInfo.getInfo(
-                    ServiceList.YouTube,
-                    YoutubePlaylistLinkHandlerFactory.getInstance().getUrl(id)
-                )
-            }
+            try {
+                val info = withContext(Dispatchers.IO) {
+                    PlaylistInfo.getInfo(
+                        ServiceList.YouTube,
+                        YoutubePlaylistLinkHandlerFactory.getInstance().getUrl(id)
+                    )
+                }
 
-            info.toPlaylist()
+                info.toPlaylist()
+            } catch (_: ContentNotAvailableException) {
+                Playlist.Unavailable
+            }
         }
 
     override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
@@ -33,7 +38,7 @@ class NewPipePlaylistRepository : PlaylistRepository {
         )
 }
 
-private fun PlaylistInfo.toPlaylist(): Playlist = Playlist(
+private fun PlaylistInfo.toPlaylist(): Playlist = Playlist.Content(
     id = id,
     title = name,
     channelName = uploaderName,

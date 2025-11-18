@@ -12,20 +12,25 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeChannelRepository : ChannelRepository {
     override suspend fun getChannel(id: String): Result<Channel> =
         runCatching {
-            val info = withContext(Dispatchers.IO) {
-                ChannelInfo.getInfo(
-                    ServiceList.YouTube,
-                    YoutubeChannelLinkHandlerFactory.getInstance().getUrl(id)
-                )
-            }
+            try {
+                val info = withContext(Dispatchers.IO) {
+                    ChannelInfo.getInfo(
+                        ServiceList.YouTube,
+                        YoutubeChannelLinkHandlerFactory.getInstance().getUrl(id)
+                    )
+                }
 
-            info.toChannel()
+                info.toChannel()
+            } catch (_: ContentNotAvailableException) {
+                Channel.Unavailable
+            }
         }
 
     override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
@@ -37,7 +42,7 @@ class NewPipeChannelRepository : ChannelRepository {
         )
 }
 
-private fun ChannelInfo.toChannel() = Channel(
+private fun ChannelInfo.toChannel() = Channel.Content(
     id = id,
     name = name,
     avatarUrl = avatars.maxBy { it.height }.url,

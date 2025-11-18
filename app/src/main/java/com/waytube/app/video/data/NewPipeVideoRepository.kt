@@ -5,6 +5,9 @@ import com.waytube.app.video.domain.VideoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
+import org.schabi.newpipe.extractor.exceptions.PaidContentException
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeStreamLinkHandlerFactory
 import org.schabi.newpipe.extractor.stream.AudioTrackType
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -19,14 +22,24 @@ import kotlin.io.encoding.Base64
 class NewPipeVideoRepository : VideoRepository {
     override suspend fun getVideo(id: String): Result<Video> =
         runCatching {
-            val info = withContext(Dispatchers.IO) {
-                StreamInfo.getInfo(
-                    ServiceList.YouTube,
-                    YoutubeStreamLinkHandlerFactory.getInstance().getUrl(id)
+            try {
+                val info = withContext(Dispatchers.IO) {
+                    StreamInfo.getInfo(
+                        ServiceList.YouTube,
+                        YoutubeStreamLinkHandlerFactory.getInstance().getUrl(id)
+                    )
+                }
+
+                info.toVideo()
+            } catch (e: ContentNotAvailableException) {
+                Video.Unavailable(
+                    reason = when (e) {
+                        is AgeRestrictedContentException -> Video.Unavailable.Reason.AGE_RESTRICTED
+                        is PaidContentException -> Video.Unavailable.Reason.MEMBERS_ONLY
+                        else -> null
+                    }
                 )
             }
-
-            info.toVideo()
         }
 }
 
@@ -34,7 +47,7 @@ private fun StreamInfo.toVideo(): Video {
     val thumbnailUrl = thumbnails.maxBy { it.height }.url
 
     return when (streamType) {
-        StreamType.VIDEO_STREAM -> Video.Regular(
+        StreamType.VIDEO_STREAM -> Video.Content.Regular(
             id = id,
             title = name,
             channelName = uploaderName,
@@ -42,7 +55,7 @@ private fun StreamInfo.toVideo(): Video {
             dashManifestUrl = generateDashManifestUrl()
         )
 
-        StreamType.LIVE_STREAM -> Video.Live(
+        StreamType.LIVE_STREAM -> Video.Content.Live(
             id = id,
             title = name,
             channelName = uploaderName,
@@ -50,7 +63,7 @@ private fun StreamInfo.toVideo(): Video {
             hlsPlaylistUrl = hlsUrl
         )
 
-        else -> error("Unsupported video type")
+        else -> Video.Unavailable(reason = Video.Unavailable.Reason.UNSUPPORTED)
     }
 }
 

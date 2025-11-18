@@ -9,9 +9,15 @@
     <string name="label_retry">Retry</string>
     <string name="label_search">Search</string>
     <string name="message_channel_load_error">There was an error loading the channel</string>
+    <string name="message_channel_unavailable">This channel is not available</string>
     <string name="message_paging_empty">No items to show</string>
     <string name="message_paging_load_error">There was an error loading items</string>
     <string name="message_playlist_load_error">There was an error loading the playlist</string>
+    <string name="message_playlist_unavailable">This playlist is not available</string>
     <string name="message_video_load_error">There was an error loading video</string>
+    <string name="message_video_age_restricted">This video is age-restricted</string>
+    <string name="message_video_members_only">This video is available only for channel members</string>
+    <string name="message_video_unavailable">This video is not available</string>
+    <string name="message_video_unsupported">This video is not supported</string>
     <string name="separator_bullet">" • "</string>
 </resources>

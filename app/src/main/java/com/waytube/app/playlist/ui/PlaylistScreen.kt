@@ -110,19 +110,36 @@ private fun PlaylistScreenContent(
             }
 
             is UiState.Data -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding
-                ) {
-                    item {
-                        PlaylistScreenCard(playlist = state.data)
+                when (val playlist = state.data) {
+                    is Playlist.Unavailable -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            StateMessage(
+                                text = stringResource(R.string.message_playlist_unavailable)
+                            )
+                        }
                     }
 
-                    pagingItems(videoItems) { item ->
-                        VideoItemCard(
-                            item = item,
-                            onClick = { onNavigateToVideo(item.id) }
-                        )
+                    is Playlist.Content -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = contentPadding
+                        ) {
+                            item {
+                                PlaylistScreenCard(playlist = playlist)
+                            }
+
+                            pagingItems(videoItems) { item ->
+                                VideoItemCard(
+                                    item = item,
+                                    onClick = { onNavigateToVideo(item.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -131,7 +148,7 @@ private fun PlaylistScreenContent(
 }
 
 @Composable
-private fun PlaylistScreenCard(playlist: Playlist) {
+private fun PlaylistScreenCard(playlist: Playlist.Content) {
     Card(modifier = Modifier.padding(8.dp)) {
         StyledImage(
             data = playlist.thumbnailUrl,

@@ -112,19 +112,36 @@ private fun ChannelScreenContent(
             }
 
             is UiState.Data -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding
-                ) {
-                    item {
-                        ChannelScreenCard(channel = state.data)
+                when (val channel = state.data) {
+                    is Channel.Unavailable -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            StateMessage(
+                                text = stringResource(R.string.message_channel_unavailable)
+                            )
+                        }
                     }
 
-                    pagingItems(videoItems) { item ->
-                        VideoItemCard(
-                            item = item,
-                            onClick = { onNavigateToVideo(item.id) }
-                        )
+                    is Channel.Content -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = contentPadding
+                        ) {
+                            item {
+                                ChannelScreenCard(channel = channel)
+                            }
+
+                            pagingItems(videoItems) { item ->
+                                VideoItemCard(
+                                    item = item,
+                                    onClick = { onNavigateToVideo(item.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -133,7 +150,7 @@ private fun ChannelScreenContent(
 }
 
 @Composable
-private fun ChannelScreenCard(channel: Channel) {
+private fun ChannelScreenCard(channel: Channel.Content) {
     Card(modifier = Modifier.padding(8.dp)) {
         channel.bannerUrl?.let { bannerUrl ->
             StyledImage(

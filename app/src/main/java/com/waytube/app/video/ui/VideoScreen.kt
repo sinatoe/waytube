@@ -47,7 +47,7 @@ private fun VideoScreenContent(
             contentColor = MaterialTheme.colorScheme.onSurface,
             contentWindowInsets = WindowInsets.displayCutout
         ) { contentPadding ->
-            when (videoState()) {
+            when (val state = videoState()) {
                 null -> {}
 
                 is UiState.Loading -> {
@@ -76,17 +76,47 @@ private fun VideoScreenContent(
                 }
 
                 is UiState.Data -> {
-                    player()?.let { player ->
-                        AndroidView(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(contentPadding),
-                            factory = { context ->
-                                PlayerView(context).apply {
-                                    this.player = player
-                                }
+                    when (val video = state.data) {
+                        is Video.Unavailable -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(contentPadding),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                StateMessage(
+                                    text = stringResource(
+                                        when (video.reason) {
+                                            Video.Unavailable.Reason.AGE_RESTRICTED ->
+                                                R.string.message_video_age_restricted
+
+                                            Video.Unavailable.Reason.MEMBERS_ONLY ->
+                                                R.string.message_video_members_only
+
+                                            Video.Unavailable.Reason.UNSUPPORTED ->
+                                                R.string.message_video_unsupported
+
+                                            null -> R.string.message_video_unavailable
+                                        }
+                                    )
+                                )
                             }
-                        )
+                        }
+
+                        is Video.Content -> {
+                            player()?.let { player ->
+                                AndroidView(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(contentPadding),
+                                    factory = { context ->
+                                        PlayerView(context).apply {
+                                            this.player = player
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }

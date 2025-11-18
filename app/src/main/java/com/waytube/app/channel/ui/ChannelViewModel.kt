@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
 import com.waytube.app.common.ui.UiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -42,7 +44,8 @@ class ChannelViewModel(
         )
 
     val videoItems = channelState
-        .map { (it as? UiState.Data)?.data?.id }
+        .map { ((it as? UiState.Data)?.data as? Channel.Content)?.id }
+        .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) repository.getVideoItems(id) else flowOf(PagingData.empty())
         }
