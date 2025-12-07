@@ -1,5 +1,6 @@
 package com.waytube.app.video.service
 
+import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
@@ -27,8 +28,20 @@ class VideoSessionService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        val pendingIntent = packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
+            PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         mediaSession = MediaSession.Builder(this, player)
             .setBitmapLoader(bitmapLoader)
+            .apply {
+                pendingIntent?.let { setSessionActivity(it) }
+            }
             .build()
 
         setMediaNotificationProvider(
