@@ -3,11 +3,15 @@
     <string name="app_name">WayTube</string>
     <string name="cd_back">Back</string>
     <string name="cd_clear">Clear</string>
+    <string name="cd_selected">Selected</string>
     <string name="label_channel">Channel</string>
+    <string name="label_channels">Channels</string>
     <string name="label_live">Live</string>
     <string name="label_playlist">Playlist</string>
+    <string name="label_playlists">Playlists</string>
     <string name="label_retry">Retry</string>
     <string name="label_search">Search</string>
+    <string name="label_videos">Videos</string>
     <string name="message_channel_load_error">There was an error loading the channel</string>
     <string name="message_channel_unavailable">This channel is not available</string>
     <string name="message_paging_empty">No items to show</string>

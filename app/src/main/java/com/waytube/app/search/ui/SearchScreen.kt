@@ -1,11 +1,15 @@
 package com.waytube.app.search.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -13,6 +17,8 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -32,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -41,6 +48,7 @@ import com.waytube.app.common.ui.ChannelItemCard
 import com.waytube.app.common.ui.PlaylistItemCard
 import com.waytube.app.common.ui.VideoItemCard
 import com.waytube.app.common.ui.pagingItems
+import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
 import kotlinx.coroutines.launch
 
@@ -53,6 +61,7 @@ fun SearchScreen(
 ) {
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val isQuerySubmitted by viewModel.isQuerySubmitted.collectAsStateWithLifecycle()
+    val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val results = viewModel.results.collectAsLazyPagingItems()
 
     val textFieldState = rememberTextFieldState()
@@ -64,8 +73,10 @@ fun SearchScreen(
     SearchScreenContent(
         textFieldState = textFieldState,
         suggestions = { suggestions },
+        selectedFilter = { selectedFilter },
         results = { if (isQuerySubmitted) results else null },
         onTrySubmit = viewModel::trySubmit,
+        onFilterClick = viewModel::toggleFilter,
         onNavigateToVideo = onNavigateToVideo,
         onNavigateToChannel = onNavigateToChannel,
         onNavigateToPlaylist = onNavigateToPlaylist
@@ -77,8 +88,10 @@ fun SearchScreen(
 private fun SearchScreenContent(
     textFieldState: TextFieldState,
     suggestions: () -> List<String>,
+    selectedFilter: () -> SearchFilter?,
     results: () -> LazyPagingItems<SearchResult>?,
     onTrySubmit: (String) -> Boolean,
+    onFilterClick: (SearchFilter) -> Unit,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
@@ -182,6 +195,40 @@ private fun SearchScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding
             ) {
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(SearchFilter.entries) { filter ->
+                            val isSelected = selectedFilter() == filter
+
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onFilterClick(filter) },
+                                leadingIcon = if (isSelected) ({
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_check),
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }) else null,
+                                label = {
+                                    Text(
+                                        text = stringResource(
+                                            when (filter) {
+                                                SearchFilter.VIDEOS -> R.string.label_videos
+                                                SearchFilter.CHANNELS -> R.string.label_channels
+                                                SearchFilter.PLAYLISTS -> R.string.label_playlists
+                                            }
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
                 pagingItems(results) { result ->
                     when (result) {
                         is SearchResult.Video -> {

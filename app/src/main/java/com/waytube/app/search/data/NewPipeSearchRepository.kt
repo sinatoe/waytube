@@ -6,6 +6,7 @@ import com.waytube.app.common.data.NewPipePagingSource
 import com.waytube.app.common.data.toChannelItem
 import com.waytube.app.common.data.toPlaylistItem
 import com.waytube.app.common.data.toVideoItem
+import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
 import com.waytube.app.search.domain.SearchResult
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +16,7 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.search.SearchExtractor
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeSearchRepository : SearchRepository {
@@ -25,9 +27,20 @@ class NewPipeSearchRepository : SearchRepository {
             }
         }
 
-    override fun getResults(query: String): Flow<PagingData<SearchResult>> =
+    override fun getResults(query: String, filter: SearchFilter?): Flow<PagingData<SearchResult>> =
         NewPipePagingSource.createFlow(
-            extractor = ServiceList.YouTube.getSearchExtractor(query),
+            extractor = ServiceList.YouTube.getSearchExtractor(
+                query,
+                listOfNotNull(
+                    when (filter) {
+                        SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
+                        SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
+                        SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
+                        null -> null
+                    },
+                ),
+                null
+            ),
             transform = { item ->
                 when (item) {
                     is StreamInfoItem -> item.toVideoItem()?.let(SearchResult::Video)
