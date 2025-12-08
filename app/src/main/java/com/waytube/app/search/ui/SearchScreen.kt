@@ -59,9 +59,7 @@ fun SearchScreen(
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
 ) {
-    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val isQuerySubmitted by viewModel.isQuerySubmitted.collectAsStateWithLifecycle()
-    val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val results = viewModel.results.collectAsLazyPagingItems()
 
     val textFieldState = rememberTextFieldState()
@@ -72,8 +70,8 @@ fun SearchScreen(
 
     SearchScreenContent(
         textFieldState = textFieldState,
-        suggestions = { suggestions },
-        selectedFilter = { selectedFilter },
+        suggestions = viewModel.suggestions.collectAsStateWithLifecycle()::value,
+        selectedFilter = viewModel.selectedFilter.collectAsStateWithLifecycle()::value,
         results = { if (isQuerySubmitted) results else null },
         onTrySubmit = viewModel::trySubmit,
         onFilterClick = viewModel::toggleFilter,

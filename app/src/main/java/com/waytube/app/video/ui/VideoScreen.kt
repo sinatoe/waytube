@@ -9,7 +9,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,12 +24,9 @@ import com.waytube.app.video.domain.Video
 
 @Composable
 fun VideoScreen(viewModel: VideoViewModel) {
-    val videoState by viewModel.videoState.collectAsStateWithLifecycle()
-    val player by viewModel.player.collectAsStateWithLifecycle(initialValue = null)
-
     VideoScreenContent(
-        videoState = { videoState },
-        player = { player },
+        videoState = viewModel.videoState.collectAsStateWithLifecycle()::value,
+        player = viewModel.player.collectAsStateWithLifecycle(initialValue = null)::value,
         onRetry = viewModel::retry
     )
 }

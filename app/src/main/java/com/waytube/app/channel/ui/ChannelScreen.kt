@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,10 +50,8 @@ fun ChannelScreen(
     viewModel: ChannelViewModel,
     onNavigateToVideo: (String) -> Unit
 ) {
-    val channelState by viewModel.channelState.collectAsStateWithLifecycle()
-
     ChannelScreenContent(
-        channelState = { channelState },
+        channelState = viewModel.channelState.collectAsStateWithLifecycle()::value,
         videoItems = viewModel.videoItems.collectAsLazyPagingItems(),
         onRetry = viewModel::retry,
         onNavigateToVideo = onNavigateToVideo

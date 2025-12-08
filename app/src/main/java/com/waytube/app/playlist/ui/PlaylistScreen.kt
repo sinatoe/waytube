@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +48,9 @@ fun PlaylistScreen(
     viewModel: PlaylistViewModel,
     onNavigateToVideo: (String) -> Unit
 ) {
-    val playlistState by viewModel.playlistState.collectAsStateWithLifecycle()
-    val videoItems = viewModel.videoItems.collectAsLazyPagingItems()
-
     PlaylistScreenContent(
-        playlistState = { playlistState },
-        videoItems = videoItems,
+        playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
+        videoItems = viewModel.videoItems.collectAsLazyPagingItems(),
         onRetry = viewModel::retry,
         onNavigateToVideo = onNavigateToVideo
     )
