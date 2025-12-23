@@ -12,6 +12,7 @@ import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeStreamLi
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toKotlinInstant
 
 fun StreamInfoItem.toVideoItem(): VideoItem? {
     val id = YoutubeStreamLinkHandlerFactory.getInstance().getId(url)
@@ -30,7 +31,7 @@ fun StreamInfoItem.toVideoItem(): VideoItem? {
             thumbnailUrl = thumbnailUrl,
             duration = duration.seconds,
             viewCount = viewCount,
-            uploadedAt = uploadDate?.offsetDateTime()?.toInstant()
+            uploadedAt = uploadDate?.offsetDateTime()?.toInstant()?.toKotlinInstant()
         )
 
         StreamType.LIVE_STREAM -> VideoItem.Live(

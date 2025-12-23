@@ -13,8 +13,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -100,7 +100,7 @@ private fun VideoItemCardPreview() {
                 thumbnailUrl = "",
                 duration = 12.minutes + 34.seconds,
                 viewCount = 1_234_567,
-                uploadedAt = Instant.now().minus(14, ChronoUnit.DAYS)
+                uploadedAt = Clock.System.now() - 14.days
             ),
             onClick = {}
         )

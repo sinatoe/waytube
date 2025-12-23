@@ -95,6 +95,7 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.koin.androidx.compose)
     implementation(libs.kotlinx.coroutines.guava)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.protobuf)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.client.core)

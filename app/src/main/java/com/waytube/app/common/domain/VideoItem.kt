@@ -1,7 +1,7 @@
 package com.waytube.app.common.domain
 
-import java.time.Instant
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 sealed interface VideoItem : Identifiable {
     val url: String
