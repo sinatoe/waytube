@@ -29,12 +29,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
+import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.StateMessage
@@ -47,6 +50,11 @@ import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
 import com.waytube.app.common.ui.toPluralCount
 import com.waytube.app.playlist.domain.Playlist
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun PlaylistScreen(
@@ -206,5 +214,48 @@ private fun PlaylistScreenCard(playlist: Playlist.Content) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun PlaylistScreenContentPreview() {
+    val videoItems = MutableStateFlow(
+        PagingData.from<VideoItem>(
+            (1..10).map { n ->
+                VideoItem.Regular(
+                    id = n.toString(),
+                    url = "",
+                    title = "Example video",
+                    channelId = "",
+                    channelName = "Example channel",
+                    thumbnailUrl = "",
+                    duration = 12.minutes + 34.seconds,
+                    viewCount = 1_234_567L,
+                    uploadedAt = Clock.System.now() - 14.days
+                )
+            }
+        )
+    ).collectAsLazyPagingItems()
+
+    AppTheme {
+        PlaylistScreenContent(
+            playlistState = {
+                UiState.Data(
+                    Playlist.Content(
+                        id = "",
+                        title = "Example playlist",
+                        channelName = "Example channel",
+                        thumbnailUrl = "",
+                        videoCount = 123
+                    )
+                )
+            },
+            videoItems = videoItems,
+            onRetry = {},
+            onShare = {},
+            onNavigateToVideo = {},
+            onNavigateToChannel = {}
+        )
     }
 }

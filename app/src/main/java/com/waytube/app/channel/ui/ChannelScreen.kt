@@ -33,13 +33,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
+import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.StateMessage
@@ -51,6 +54,11 @@ import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
 import com.waytube.app.common.ui.toPluralCount
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun ChannelScreen(
@@ -215,5 +223,47 @@ private fun ChannelScreenCard(channel: Channel.Content) {
                 }
             }
         }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ChannelScreenContentPreview() {
+    val videoItems = MutableStateFlow(
+        PagingData.from<VideoItem>(
+            (1..10).map { n ->
+                VideoItem.Regular(
+                    id = n.toString(),
+                    url = "",
+                    title = "Example video",
+                    channelId = "",
+                    channelName = "Example channel",
+                    thumbnailUrl = "",
+                    duration = 12.minutes + 34.seconds,
+                    viewCount = 1_234_567L,
+                    uploadedAt = Clock.System.now() - 14.days
+                )
+            }
+        )
+    ).collectAsLazyPagingItems()
+
+    AppTheme {
+        ChannelScreenContent(
+            channelState = {
+                UiState.Data(
+                    Channel.Content(
+                        id = "",
+                        name = "Example channel",
+                        avatarUrl = "",
+                        bannerUrl = "",
+                        subscriberCount = 1_234_567
+                    )
+                )
+            },
+            videoItems = videoItems,
+            onRetry = {},
+            onShare = {},
+            onNavigateToVideo = {}
+        )
     }
 }

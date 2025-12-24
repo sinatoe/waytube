@@ -42,11 +42,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
+import com.waytube.app.common.domain.VideoItem
+import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ChannelItemCard
 import com.waytube.app.common.ui.ItemMenuSheet
@@ -56,7 +61,12 @@ import com.waytube.app.common.ui.pagingItems
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun SearchScreen(
@@ -293,5 +303,49 @@ private fun SearchScreenContent(
                 }
             }
         }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun SearchScreenPreview() {
+    val results = MutableStateFlow(
+        PagingData.from<SearchResult>(
+            (1..10).map { n ->
+                SearchResult.Video(
+                    VideoItem.Regular(
+                        id = n.toString(),
+                        url = "",
+                        title = "Example video",
+                        channelId = "",
+                        channelName = "Example channel",
+                        thumbnailUrl = "",
+                        duration = 12.minutes + 34.seconds,
+                        viewCount = 1_234_567,
+                        uploadedAt = Clock.System.now() - 14.days
+                    )
+                )
+            }
+        )
+    ).collectAsLazyPagingItems()
+
+    AppTheme {
+        SearchScreenContent(
+            textFieldState = rememberTextFieldState(initialText = "example query"),
+            suggestions = {
+                SearchSuggestions(
+                    items = (1..10).map { n -> "example suggestion $n" },
+                    type = SearchSuggestions.Type.HISTORY
+                )
+            },
+            selectedFilter = { SearchFilter.VIDEOS },
+            results = { results },
+            onTrySubmit = { true },
+            onFilterClick = {},
+            onShare = {},
+            onNavigateToVideo = {},
+            onNavigateToChannel = {},
+            onNavigateToPlaylist = {}
+        )
     }
 }
