@@ -1,5 +1,6 @@
 package com.waytube.app.search.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -80,6 +81,11 @@ fun SearchScreen(
 
     val textFieldState = rememberTextFieldState()
 
+    BackHandler(enabled = isQuerySubmitted) {
+        viewModel.clearSubmittedQuery()
+        textFieldState.clearText()
+    }
+    
     LaunchedEffect(textFieldState.text) {
         viewModel.setSuggestionQuery(textFieldState.text.toString())
     }
