@@ -112,4 +112,8 @@ class SearchViewModel(
     fun toggleFilter(filter: SearchFilter) {
         _selectedFilter.update { selectedFilter -> filter.takeIf { it != selectedFilter } }
     }
+    fun clearSubmittedQuery() {
+        submittedQuery.value = null
+        _selectedFilter.value = null 
+    }
 }
