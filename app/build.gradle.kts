@@ -106,4 +106,7 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.newpipe.extractor)
     implementation(libs.okhttp)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
 }

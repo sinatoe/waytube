@@ -46,7 +46,7 @@ class SearchViewModel(
     )
 
     val suggestions = suggestionsQuery
-        .debounce { if (it.isNotEmpty()) 150.milliseconds else Duration.ZERO }
+        .debounce { if (it.isNotEmpty()) REMOTE_SUGGESTIONS_DEBOUNCE else Duration.ZERO }
         .flatMapLatest { query ->
             if (query.isNotEmpty()) flow {
                 emit(
@@ -111,5 +111,9 @@ class SearchViewModel(
 
     fun toggleFilter(filter: SearchFilter) {
         _selectedFilter.update { selectedFilter -> filter.takeIf { it != selectedFilter } }
+    }
+
+    companion object {
+        val REMOTE_SUGGESTIONS_DEBOUNCE = 150.milliseconds
     }
 }
