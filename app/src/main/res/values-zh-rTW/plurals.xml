@@ -1,0 +1,12 @@
+<resources>
+    <plurals name="subscriber_count">
+        <item quantity="other">%s 訂閱者</item>
+    </plurals>
+    <plurals name="view_count">
+        <item quantity="other">%s 次觀看</item>
+    </plurals>
+    <plurals name="video_count">
+        <item quantity="other">%s 部影片</item>
+    </plurals>
+
+</resources>

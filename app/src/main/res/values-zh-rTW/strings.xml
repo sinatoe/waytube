@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WayTube</string>
+    <string name="cd_back">返回</string>
+    <string name="cd_clear">清除</string>
+    <string name="cd_selected">已選取</string>
+    <string name="cd_stop">停止</string>
+    <string name="label_channel">頻道</string>
+    <string name="label_channels">頻道</string>
+    <string name="label_go_to_channel">前往頻道</string>
+    <string name="label_live">直播</string>
+    <string name="label_play_in_background">背景播放</string>
+    <string name="label_playlist">播放清單</string>
+    <string name="label_playlists">播放清單</string>
+    <string name="label_retry">重試</string>
+    <string name="label_search">搜尋</string>
+    <string name="label_share">分享</string>
+    <string name="label_videos">影片</string>
+    <string name="message_channel_load_error">載入頻道時發生錯誤</string>
+    <string name="message_channel_unavailable">此頻道無法使用</string>
+    <string name="message_paging_empty">沒有可顯示的項目</string>
+    <string name="message_paging_load_error">載入項目時發生錯誤</string>
+    <string name="message_playlist_load_error">載入播放清單時發生錯誤</string>
+    <string name="message_playlist_unavailable">此播放清單無法使用</string>
+    <string name="message_video_load_error">載入影片時發生錯誤</string>
+    <string name="message_video_age_restricted">此影片有年齡限制</string>
+    <string name="message_video_members_only">此影片僅限頻道會員觀看</string>
+    <string name="message_video_unavailable">此影片無法使用</string>
+    <string name="message_video_unsupported">不支援此影片格式</string>
+    <string name="separator_bullet">" • "</string>
+</resources>
