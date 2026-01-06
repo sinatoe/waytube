@@ -80,7 +80,7 @@ class VideoViewModel(
             initialValue = null
         )
 
-    val isActive = videoState
+    val isActive = videoId
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
