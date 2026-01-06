@@ -17,6 +17,10 @@ A distraction-free YouTube client for Android, built with Jetpack Compose.
 - **SponsorBlock integration:** Automatically skips sponsor segments.
 - **Deep link support:** Open `youtube.com` and `youtu.be` links directly in WayTube.
 
+## Installation
+
+To download the APK file directly, visit [Releases](https://github.com/sinatoe/waytube/releases). For automatic updates, you can use [Obtainium](https://github.com/ImranR98/Obtainium) and add this repository as a source.
+
 ## Showcase
 
 <img src="./assets/app-showcase.png" alt width="60%">
