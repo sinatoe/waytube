@@ -12,7 +12,6 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubePlaylistLinkHandlerFactory
 
 class NewPipePlaylistRepository : PlaylistRepository {
     override suspend fun getPlaylist(id: String): Result<Playlist> =
@@ -21,7 +20,7 @@ class NewPipePlaylistRepository : PlaylistRepository {
                 val info = withContext(Dispatchers.IO) {
                     PlaylistInfo.getInfo(
                         ServiceList.YouTube,
-                        YoutubePlaylistLinkHandlerFactory.getInstance().getUrl(id)
+                        ServiceList.YouTube.playlistLHFactory.getUrl(id)
                     )
                 }
 

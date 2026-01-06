@@ -17,7 +17,6 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.PaidContentException
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeStreamLinkHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import kotlin.time.Duration.Companion.seconds
@@ -31,7 +30,7 @@ class NewPipeVideoRepository(private val httpClient: HttpClient) : VideoReposito
                 val info = withContext(Dispatchers.IO) {
                     StreamInfo.getInfo(
                         ServiceList.YouTube,
-                        YoutubeStreamLinkHandlerFactory.getInstance().getUrl(id)
+                        ServiceList.YouTube.streamLHFactory.getUrl(id)
                     )
                 }
 

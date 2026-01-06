@@ -3,21 +3,19 @@ package com.waytube.app.common.data
 import com.waytube.app.common.domain.ChannelItem
 import com.waytube.app.common.domain.PlaylistItem
 import com.waytube.app.common.domain.VideoItem
+import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubePlaylistLinkHandlerFactory
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeStreamLinkHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinInstant
 
 fun StreamInfoItem.toVideoItem(): VideoItem? {
-    val id = YoutubeStreamLinkHandlerFactory.getInstance().getId(url)
+    val id = ServiceList.YouTube.streamLHFactory.getId(url)
     val channelId = uploaderUrl?.let { url ->
-        YoutubeChannelLinkHandlerFactory.getInstance().getId(url)
+        ServiceList.YouTube.channelLHFactory.getId(url)
     }
     val thumbnailUrl = thumbnails.maxBy { it.height }.url
 
@@ -49,7 +47,7 @@ fun StreamInfoItem.toVideoItem(): VideoItem? {
 }
 
 fun ChannelInfoItem.toChannelItem(): ChannelItem = ChannelItem(
-    id = YoutubeChannelLinkHandlerFactory.getInstance().getId(url),
+    id = ServiceList.YouTube.channelLHFactory.getId(url),
     url = url,
     name = name,
     avatarUrl = thumbnails.maxBy { it.height }.url,
@@ -59,11 +57,11 @@ fun ChannelInfoItem.toChannelItem(): ChannelItem = ChannelItem(
 fun PlaylistInfoItem.toPlaylistItem(): PlaylistItem? =
     if (playlistType == PlaylistInfo.PlaylistType.NORMAL) {
         PlaylistItem(
-            id = YoutubePlaylistLinkHandlerFactory.getInstance().getId(url),
+            id = ServiceList.YouTube.playlistLHFactory.getId(url),
             url = url,
             title = name,
             channelId = uploaderUrl?.let { url ->
-                YoutubeChannelLinkHandlerFactory.getInstance().getId(url)
+                ServiceList.YouTube.channelLHFactory.getId(url)
             },
             channelName = uploaderName,
             thumbnailUrl = thumbnails.maxBy { it.height }.url,

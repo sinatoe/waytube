@@ -13,7 +13,6 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
-import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeChannelRepository : ChannelRepository {
@@ -23,7 +22,7 @@ class NewPipeChannelRepository : ChannelRepository {
                 val info = withContext(Dispatchers.IO) {
                     ChannelInfo.getInfo(
                         ServiceList.YouTube,
-                        YoutubeChannelLinkHandlerFactory.getInstance().getUrl(id)
+                        ServiceList.YouTube.channelLHFactory.getUrl(id)
                     )
                 }
 
