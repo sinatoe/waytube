@@ -43,3 +43,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: app/build/outputs/apk/release/app-release.apk
+          draft: true
