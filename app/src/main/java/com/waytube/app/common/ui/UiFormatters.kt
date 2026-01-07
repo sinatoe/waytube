@@ -12,7 +12,7 @@ import kotlin.time.Instant
 
 fun Duration.toFormattedString(): String = DateUtils.formatElapsedTime(inWholeSeconds)
 
-fun Long.toPluralCount(): Int = coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+fun Long.toPluralCount(): Int = if (this >= 1000) 0 else toInt()
 
 fun Long.toCompactString(): String = CompactDecimalFormat
     .getInstance(Locale.getDefault(), CompactDecimalFormat.CompactStyle.SHORT)

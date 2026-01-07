@@ -72,9 +72,9 @@ fun VideoItemCard(
                     ).joinToString(stringResource(R.string.separator_bullet))
 
                     is VideoItem.Live -> pluralStringResource(
-                        R.plurals.viewer_count,
-                        item.viewerCount.toPluralCount(),
-                        item.viewerCount.toCompactString()
+                        R.plurals.watching_count,
+                        item.watchingCount.toPluralCount(),
+                        item.watchingCount.toCompactString()
                     )
                 },
                 maxLines = 1,

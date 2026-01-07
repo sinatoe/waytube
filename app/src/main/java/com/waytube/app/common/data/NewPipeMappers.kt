@@ -39,7 +39,7 @@ fun StreamInfoItem.toVideoItem(): VideoItem? {
             channelId = channelId,
             channelName = uploaderName,
             thumbnailUrl = thumbnailUrl,
-            viewerCount = viewCount
+            watchingCount = viewCount
         )
 
         else -> null

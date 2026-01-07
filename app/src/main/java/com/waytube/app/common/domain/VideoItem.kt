@@ -29,6 +29,6 @@ sealed interface VideoItem : Identifiable {
         override val channelId: String?,
         override val channelName: String?,
         override val thumbnailUrl: String,
-        val viewerCount: Long
+        val watchingCount: Long
     ) : VideoItem
 }
