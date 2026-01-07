@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WayTube</string>
+    <string name="cd_back">Wstecz</string>
+    <string name="cd_clear">Wyczyść</string>
+    <string name="cd_selected">Wybrano</string>
+    <string name="cd_stop">Zatrzymaj</string>
+    <string name="label_channel">Kanał</string>
+    <string name="label_channels">Kanały</string>
+    <string name="label_go_to_channel">Przejdź do kanału</string>
+    <string name="label_live">Na żywo</string>
+    <string name="label_play_in_background">Odtwórz w tle</string>
+    <string name="label_playlist">Playlista</string>
+    <string name="label_playlists">Playlisty</string>
+    <string name="label_retry">Ponów</string>
+    <string name="label_search">Wyszukaj</string>
+    <string name="label_share">Udostępnij</string>
+    <string name="label_videos">Filmy</string>
+    <string name="message_channel_load_error">Wystąpił błąd podczas wczytywania kanału</string>
+    <string name="message_channel_unavailable">Ten kanał jest niedostępny</string>
+    <string name="message_paging_empty">Brak elementów do wyświetlenia</string>
+    <string name="message_paging_load_error">Wystąpił błąd podczas wczytywania elementów</string>
+    <string name="message_playlist_load_error">Wystąpił błąd podczas wczytywania playlisty</string>
+    <string name="message_playlist_unavailable">Ta playlista jest niedostępna</string>
+    <string name="message_video_load_error">Wystąpił błąd podczas wczytywania filmu</string>
+    <string name="message_video_age_restricted">Ten film ma ograniczenia wiekowe</string>
+    <string name="message_video_members_only">Ten film jest dostępny tylko dla członków kanału</string>
+    <string name="message_video_unavailable">Ten film jest niedostępny</string>
+    <string name="message_video_unsupported">Ten film nie jest obsługiwany</string>
+    <string name="separator_bullet">" • "</string>
+</resources>

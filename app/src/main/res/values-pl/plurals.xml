@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="subscriber_count">
+        <item quantity="one">%s subskrybent</item>
+        <item quantity="few">%s subskrybentów</item>
+        <item quantity="many">%s subskrybentów</item>
+        <item quantity="other">%s subskrybentów</item>
+    </plurals>
+    <plurals name="video_count">
+        <item quantity="one">%s film</item>
+        <item quantity="few">%s filmy</item>
+        <item quantity="many">%s filmów</item>
+        <item quantity="other">%s filmów</item>
+    </plurals>
+    <plurals name="watching_count">
+        <item quantity="one">%s oglądający</item>
+        <item quantity="few">%s oglądających</item>
+        <item quantity="many">%s oglądających</item>
+        <item quantity="other">%s oglądających</item>
+    </plurals>
+    <plurals name="view_count">
+        <item quantity="one">%s wyświetlenie</item>
+        <item quantity="few">%s wyświetlenia</item>
+        <item quantity="many">%s wyświetleń</item>
+        <item quantity="other">%s wyświetleń</item>
+    </plurals>
+</resources>
