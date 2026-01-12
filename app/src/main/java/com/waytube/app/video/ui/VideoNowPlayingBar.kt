@@ -119,6 +119,9 @@ private fun VideoNowPlayingBarContent(
                                         Video.Unavailable.Reason.AGE_RESTRICTED ->
                                             R.string.message_video_age_restricted
 
+                                        Video.Unavailable.Reason.BOT_FLAGGED ->
+                                            R.string.message_video_bot_flagged
+
                                         Video.Unavailable.Reason.MEMBERS_ONLY ->
                                             R.string.message_video_members_only
 

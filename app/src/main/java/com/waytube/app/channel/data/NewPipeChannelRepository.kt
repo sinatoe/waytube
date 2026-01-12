@@ -35,9 +35,7 @@ class NewPipeChannelRepository : ChannelRepository {
     override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
         NewPipePagingSource.createFlow(
             extractor = ServiceList.YouTube.getChannelTabExtractorFromId(id, ChannelTabs.VIDEOS),
-            transform = { item ->
-                (item as? StreamInfoItem)?.takeIf { it.viewCount != -1L }?.toVideoItem()
-            }
+            transform = { item -> (item as? StreamInfoItem)?.toVideoItem() }
         )
 }
 

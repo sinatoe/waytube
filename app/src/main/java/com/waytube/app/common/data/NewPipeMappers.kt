@@ -7,12 +7,17 @@ import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
+import org.schabi.newpipe.extractor.stream.ContentAvailability
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinInstant
 
 fun StreamInfoItem.toVideoItem(): VideoItem? {
+    if (contentAvailability != ContentAvailability.AVAILABLE) {
+        return null
+    }
+
     val id = ServiceList.YouTube.streamLHFactory.getId(url)
     val channelId = uploaderUrl?.let { url ->
         ServiceList.YouTube.channelLHFactory.getId(url)
@@ -29,7 +34,7 @@ fun StreamInfoItem.toVideoItem(): VideoItem? {
             thumbnailUrl = thumbnailUrl,
             duration = duration.seconds,
             viewCount = viewCount,
-            uploadedAt = uploadDate?.offsetDateTime()?.toInstant()?.toKotlinInstant()
+            uploadedAt = uploadDate?.instant?.toKotlinInstant()
         )
 
         StreamType.LIVE_STREAM -> VideoItem.Live(
