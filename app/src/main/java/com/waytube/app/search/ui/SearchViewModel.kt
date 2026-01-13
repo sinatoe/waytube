@@ -16,13 +16,16 @@ import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -92,22 +95,24 @@ class SearchViewModel(
         }
         .cachedIn(viewModelScope)
 
+    init {
+        submittedQuery
+            .drop(1)
+            .filterNotNull()
+            .onEach { query ->
+                _selectedFilter.value = null
+                preferencesRepository.saveSearch(query)
+            }
+            .launchIn(viewModelScope)
+    }
+
     fun setSuggestionQuery(query: String) {
         suggestionsQuery.value = query
     }
 
     fun trySubmit(query: String): Boolean = query
         .takeIf { it.isNotBlank() }
-        ?.also { query ->
-            if (submittedQuery.value != query) {
-                submittedQuery.value = query
-                _selectedFilter.value = null
-
-                viewModelScope.launch {
-                    preferencesRepository.saveSearch(query)
-                }
-            }
-        } != null
+        ?.also { submittedQuery.value = it } != null
 
     fun toggleFilter(filter: SearchFilter) {
         _selectedFilter.update { selectedFilter -> filter.takeIf { it != selectedFilter } }
