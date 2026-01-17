@@ -113,9 +113,7 @@ class SearchViewModel(
         .takeIf { it.isNotBlank() }
         ?.also { query ->
             searchState.update { state ->
-                if (state?.query != query) {
-                    SearchState(query)
-                } else state
+                if (state?.query != query) SearchState(query) else state
             }
         } != null
 
