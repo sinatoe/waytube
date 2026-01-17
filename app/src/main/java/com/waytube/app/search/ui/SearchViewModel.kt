@@ -1,9 +1,9 @@
 package com.waytube.app.search.ui
 
+import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
@@ -13,22 +13,26 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.WhileSubscribed
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+
+@Parcelize
+private data class SearchState(
+    val query: String,
+    val filter: SearchFilter? = null
+) : Parcelable
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class SearchViewModel(
@@ -38,13 +42,8 @@ class SearchViewModel(
 ) : ViewModel() {
     private val suggestionsQuery = MutableStateFlow("")
 
-    private val submittedQuery = savedStateHandle.getMutableStateFlow<String?>(
-        key = "submitted_query",
-        initialValue = null
-    )
-
-    private val _selectedFilter = savedStateHandle.getMutableStateFlow<SearchFilter?>(
-        key = "selected_filter",
+    private val searchState = savedStateHandle.getMutableStateFlow<SearchState?>(
+        key = "search_state",
         initialValue = null
     )
 
@@ -76,7 +75,7 @@ class SearchViewModel(
             )
         )
 
-    val isQuerySubmitted = submittedQuery
+    val isSearchSubmitted = searchState
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
@@ -84,25 +83,25 @@ class SearchViewModel(
             initialValue = false
         )
 
-    val selectedFilter = _selectedFilter.asStateFlow()
+    val selectedFilter = searchState
+        .map { it?.filter }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 
-    val results = combine(
-        submittedQuery,
-        _selectedFilter
-    ) { query, filter -> query to filter }
-        .flatMapLatest { (query, filter) ->
-            if (query != null) repository.getResults(query, filter) else flowOf(PagingData.empty())
-        }
+    val results = searchState
+        .filterNotNull()
+        .flatMapLatest { (query, filter) -> repository.getResults(query, filter) }
         .cachedIn(viewModelScope)
 
     init {
-        submittedQuery
-            .drop(1)
+        searchState
             .filterNotNull()
-            .onEach { query ->
-                _selectedFilter.value = null
-                preferencesRepository.saveSearch(query)
-            }
+            .map { it.query }
+            .distinctUntilChanged()
+            .onEach(preferencesRepository::saveSearch)
             .launchIn(viewModelScope)
     }
 
@@ -112,10 +111,16 @@ class SearchViewModel(
 
     fun trySubmit(query: String): Boolean = query
         .takeIf { it.isNotBlank() }
-        ?.also { submittedQuery.value = it } != null
+        ?.also { query ->
+            searchState.update { state ->
+                if (state?.query != query) SearchState(query) else state
+            }
+        } != null
 
     fun toggleFilter(filter: SearchFilter) {
-        _selectedFilter.update { selectedFilter -> filter.takeIf { it != selectedFilter } }
+        searchState.update { state ->
+            state?.copy(filter = filter.takeIf { state.filter != it }) ?: state
+        }
     }
 
     companion object {

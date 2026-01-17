@@ -1,5 +1,6 @@
 package com.waytube.app.video.ui
 
+import android.os.Parcelable
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -27,7 +28,10 @@ import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -37,11 +41,22 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+
+@Parcelize
+private data class VideoSessionState(
+    val videoId: String,
+    val position: Duration? = null,
+    val skippedSegmentIds: Set<String> = emptySet()
+) : Parcelable
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VideoViewModel(
@@ -49,28 +64,28 @@ class VideoViewModel(
     private val controllerFuture: ListenableFuture<MediaController>,
     private val repository: VideoRepository
 ) : ViewModel() {
-    private val videoId = savedStateHandle.getMutableStateFlow<String?>(
-        key = "video_id",
+    private val sessionState = savedStateHandle.getMutableStateFlow<VideoSessionState?>(
+        key = "session_state",
         initialValue = null
     )
 
-    private val positionMs = savedStateHandle.getMutableStateFlow<Long?>(
-        key = "position_ms",
-        initialValue = null
-    )
-
-    private val skippedSegmentIds = savedStateHandle.getMutableStateFlow(
-        key = "skipped_segment_ids",
-        initialValue = emptyList<String>()
-    )
+    private val isAutoplayRequested = sessionState
+        .drop(1)
+        .map { true }
+        .take(1)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false
+        )
 
     private val videoLoader = UiStateLoader()
 
     private val skipSegmentsLoader = UiStateLoader()
 
-    private var isAutoplayRequested = false
-
-    val videoState = videoId
+    val videoState = sessionState
+        .map { it?.videoId }
+        .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) videoLoader.bind { repository.getVideo(id) } else flowOf(null)
         }
@@ -80,7 +95,7 @@ class VideoViewModel(
             initialValue = null
         )
 
-    val isActive = videoId
+    val isActive = sessionState
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
@@ -124,9 +139,10 @@ class VideoViewModel(
             videoState
                 .map { ((it as? UiState.Data)?.data as? Video.Content) }
                 .distinctUntilChanged(),
-            player
-        ) { video, player -> video to player }
-            .onEach { (video, player) ->
+            player,
+            sessionState.filterNotNull().distinctUntilChangedBy { it.videoId }.map { it.position }
+        ) { video, player, position -> Triple(video, player, position) }
+            .onEach { (video, player, position) ->
                 if (video != null) {
                     val (uri, mimeType) = when (video) {
                         is Video.Content.Regular ->
@@ -149,11 +165,11 @@ class VideoViewModel(
                         .build()
 
                     player.apply {
-                        positionMs.value?.let { positionMs ->
-                            setMediaItem(mediaItem, positionMs)
+                        position?.also { position ->
+                            setMediaItem(mediaItem, position.inWholeMilliseconds)
                         } ?: setMediaItem(mediaItem)
                         prepare()
-                        playWhenReady = isAutoplayRequested
+                        playWhenReady = isAutoplayRequested.value
                     }
                 } else {
                     player.apply {
@@ -215,35 +231,38 @@ class VideoViewModel(
                     merge(eventsPosition, pollingPosition)
                 } else emptyFlow()
             }
-            .onEach { positionMs.value = it }
+            .onEach { positionMs ->
+                sessionState.update { state ->
+                    state?.copy(position = positionMs.milliseconds)
+                }
+            }
             .launchIn(viewModelScope)
 
         combine(
             player,
-            positionMs.map { it?.milliseconds },
-            skipSegments.map { (it as? UiState.Data)?.data }.distinctUntilChanged()
-        ) { player, position, skipSegments -> Triple(player, position, skipSegments) }
-            .onEach { (player, position, skipSegments) ->
-                if (position != null) {
-                    val segment = skipSegments?.find { (id, start, end) ->
-                        position in start..end && skippedSegmentIds.value.contains(id).not()
-                    }
-
-                    if (segment != null) {
-                        player.seekTo(segment.end.inWholeMilliseconds)
-                        skippedSegmentIds.value += segment.id
-                    }
+            sessionState,
+            skipSegments.map { (it as? UiState.Data)?.data }
+        ) { player, state, skipSegments -> Triple(player, state, skipSegments) }
+            .onEach { (player, state, skipSegments) ->
+                if (state?.position != null) {
+                    skipSegments
+                        ?.find { (id, start, end) ->
+                            state.position in start..end && !state.skippedSegmentIds.contains(id)
+                        }
+                        ?.also { segment ->
+                            player.seekTo(segment.end.inWholeMilliseconds)
+                            sessionState.value = state.copy(
+                                skippedSegmentIds = state.skippedSegmentIds + segment.id
+                            )
+                        }
                 }
             }
             .launchIn(viewModelScope)
     }
 
     fun play(id: String) {
-        if (videoId.value != id) {
-            videoId.value = id
-            positionMs.value = null
-            isAutoplayRequested = true
-            skippedSegmentIds.value = emptyList()
+        sessionState.update { state ->
+            if (state?.videoId != id) VideoSessionState(id) else state
         }
     }
 
@@ -252,7 +271,7 @@ class VideoViewModel(
     }
 
     fun stop() {
-        videoId.value = null
+        sessionState.value = null
     }
 
     override fun onCleared() {
