@@ -9,3 +9,5 @@
 -dontwarn javax.script.**
 -keep class jdk.dynalink.** { *; }
 -dontwarn jdk.dynalink.**
+
+-dontwarn com.google.re2j.**
