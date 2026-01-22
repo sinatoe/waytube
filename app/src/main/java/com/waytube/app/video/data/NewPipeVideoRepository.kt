@@ -15,6 +15,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.PaidContentException
 import org.schabi.newpipe.extractor.exceptions.ParsingException
 import org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException
@@ -42,7 +43,8 @@ class NewPipeVideoRepository(private val httpClient: HttpClient) : VideoReposito
                         is AgeRestrictedContentException -> Video.Unavailable.Reason.AGE_RESTRICTED
                         is SignInConfirmNotBotException -> Video.Unavailable.Reason.BOT_FLAGGED
                         is PaidContentException -> Video.Unavailable.Reason.MEMBERS_ONLY
-                        else -> null
+                        is ContentNotAvailableException -> null
+                        else -> throw e
                     }
                 )
             }
