@@ -24,8 +24,7 @@
     <string name="message_playlist_unavailable">此播放清單無法使用</string>
     <string name="message_video_load_error">載入影片時發生錯誤</string>
     <string name="message_video_age_restricted">此影片有年齡限制</string>
-    <string name="message_video_bot_flagged">此影片已被機器人防護機制封鎖</string> <!-- ai -->
-    <string name="message_video_members_only">此影片僅限頻道會員觀看</string>
+    <string name="message_video_ip_address_blocked">來自您 IP 位址的影片存取已被封鎖</string> <!-- ai -->
     <string name="message_video_unavailable">此影片無法使用</string>
     <string name="message_video_unsupported">不支援此影片格式</string>
     <string name="separator_bullet">" • "</string>

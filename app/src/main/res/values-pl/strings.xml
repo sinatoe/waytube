@@ -24,8 +24,7 @@
     <string name="message_playlist_unavailable">Ta playlista jest niedostępna</string>
     <string name="message_video_load_error">Wystąpił błąd podczas wczytywania filmu</string>
     <string name="message_video_age_restricted">Ten film ma ograniczenia wiekowe</string>
-    <string name="message_video_bot_flagged">Zabezpieczenia antybotowe zablokowały dostęp do tego filmu</string>
-    <string name="message_video_members_only">Ten film jest dostępny tylko dla członków kanału</string>
+    <string name="message_video_ip_address_blocked">Dostęp do filmów z twojego adresu IP został zablokowany</string>
     <string name="message_video_unavailable">Ten film jest niedostępny</string>
     <string name="message_video_unsupported">Ten film nie jest obsługiwany</string>
     <string name="separator_bullet">" • "</string>

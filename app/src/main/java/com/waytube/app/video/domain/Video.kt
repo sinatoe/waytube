@@ -27,8 +27,7 @@ sealed interface Video {
     data class Unavailable(val reason: Reason?) : Video {
         enum class Reason {
             AGE_RESTRICTED,
-            BOT_FLAGGED,
-            MEMBERS_ONLY,
+            IP_ADDRESS_BLOCKED,
             UNSUPPORTED
         }
     }
