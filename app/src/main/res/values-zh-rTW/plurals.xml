@@ -5,10 +5,10 @@
     <plurals name="video_count">
         <item quantity="other">%s 部影片</item>
     </plurals>
-    <plurals name="watching_count"> <!-- ai -->
-        <item quantity="other">%s 人正在觀看</item>
-    </plurals>
     <plurals name="view_count">
         <item quantity="other">%s 次觀看</item>
+    </plurals>
+    <plurals name="watching_count"> <!-- ai -->
+        <item quantity="other">%s 人正在觀看</item>
     </plurals>
 </resources>

@@ -8,11 +8,11 @@
         <item quantity="one">%s video</item>
         <item quantity="other">%s videos</item>
     </plurals>
-    <plurals name="watching_count">
-        <item quantity="other">%s watching</item>
-    </plurals>
     <plurals name="view_count">
         <item quantity="one">%s view</item>
         <item quantity="other">%s views</item>
+    </plurals>
+    <plurals name="watching_count">
+        <item quantity="other">%s watching</item>
     </plurals>
 </resources>
