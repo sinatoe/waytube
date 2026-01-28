@@ -44,7 +44,6 @@ import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.VideoPlayMode
 import com.waytube.app.common.ui.pagingItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
@@ -60,7 +59,7 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun PlaylistScreen(
     viewModel: PlaylistViewModel,
-    onPlayVideo: (String, VideoPlayMode) -> Unit,
+    onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
@@ -80,7 +79,7 @@ private fun PlaylistScreenContent(
     videoItems: LazyPagingItems<VideoItem>,
     onRetry: () -> Unit,
     onShare: (String) -> Unit,
-    onPlayVideo: (String, VideoPlayMode) -> Unit,
+    onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -91,7 +90,6 @@ private fun PlaylistScreenContent(
         ItemMenuSheet(
             onDismissRequest = { selectedMenuItem = null },
             onShare = { onShare(item.url) },
-            onPlayInBackground = { onPlayVideo(item.id, VideoPlayMode.BACKGROUND) },
             onNavigateToChannel = item.channelId?.let { id ->
                 { onNavigateToChannel(id) }
             }
@@ -165,7 +163,7 @@ private fun PlaylistScreenContent(
                             pagingItems(videoItems) { item ->
                                 VideoItemCard(
                                     item = item,
-                                    onClick = { onPlayVideo(item.id, VideoPlayMode.FOREGROUND) },
+                                    onClick = { onPlayVideo(item.id) },
                                     onLongClick = { selectedMenuItem = item }
                                 )
                             }
@@ -256,7 +254,7 @@ private fun PlaylistScreenContentPreview() {
             videoItems = videoItems,
             onRetry = {},
             onShare = {},
-            onPlayVideo = { _, _ -> },
+            onPlayVideo = {},
             onNavigateToChannel = {}
         )
     }

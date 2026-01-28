@@ -23,7 +23,6 @@ fun ItemMenuSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     onShare: (() -> Unit)? = null,
-    onPlayInBackground: (() -> Unit)? = null,
     onNavigateToChannel: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -35,13 +34,6 @@ fun ItemMenuSheet(
                 it,
                 painterResource(R.drawable.ic_share),
                 stringResource(R.string.label_share)
-            )
-        },
-        onPlayInBackground?.let {
-            Triple(
-                it,
-                painterResource(R.drawable.ic_play_circle),
-                stringResource(R.string.label_play_in_background)
             )
         },
         onNavigateToChannel?.let {

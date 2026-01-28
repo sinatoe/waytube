@@ -9,7 +9,6 @@
     <string name="label_channels">頻道</string>
     <string name="label_go_to_channel">前往頻道</string>
     <string name="label_live">直播</string>
-    <string name="label_play_in_background">背景播放</string>
     <string name="label_playlist">播放清單</string>
     <string name="label_playlists">播放清單</string>
     <string name="label_retry">重試</string>

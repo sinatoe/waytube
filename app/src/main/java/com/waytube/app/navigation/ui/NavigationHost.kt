@@ -7,19 +7,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -28,23 +20,20 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.waytube.app.channel.ui.ChannelScreen
-import com.waytube.app.common.ui.VideoPlayMode
 import com.waytube.app.navigation.domain.DeepLinkResult
 import com.waytube.app.playlist.ui.PlaylistScreen
 import com.waytube.app.search.ui.SearchScreen
-import com.waytube.app.video.ui.VideoNowPlayingBar
 import com.waytube.app.video.ui.VideoScreen
 import com.waytube.app.video.ui.VideoViewModel
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private data object RootRoute
-
-private data object VideoRoute
 
 @Serializable
 private data object SearchRoute : NavKey
+
+private data object VideoRoute : NavKey
 
 @Serializable
 private data class ChannelRoute(val id: String) : NavKey
@@ -64,30 +53,27 @@ fun NavigationHost(
 
     val backStack = rememberNavBackStack(SearchRoute)
 
-    var isVideoFullscreen by rememberSaveable { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         viewModel.deepLinkResult.collect { result ->
             when (result) {
                 is DeepLinkResult.Video -> {
                     videoViewModel.play(result.id)
-                    isVideoFullscreen = true
                 }
 
                 is DeepLinkResult.Channel -> {
                     backStack += ChannelRoute(result.id)
-                    isVideoFullscreen = false
+                    videoViewModel.stop()
                 }
 
                 is DeepLinkResult.Playlist -> {
                     backStack += PlaylistRoute(result.id)
-                    isVideoFullscreen = false
+                    videoViewModel.stop()
                 }
             }
         }
     }
 
-    if (isVideoActive && isVideoFullscreen) {
+    if (isVideoActive) {
         DisposableEffect(Unit) {
             onSetVideoImmersiveMode(true)
 
@@ -95,7 +81,7 @@ fun NavigationHost(
         }
     }
 
-    if (isVideoActive && isVideoFullscreen && isVideoPlaying) {
+    if (isVideoActive && isVideoPlaying) {
         DisposableEffect(Unit) {
             onKeepScreenAwake(true)
 
@@ -105,104 +91,72 @@ fun NavigationHost(
 
     Surface {
         NavDisplay(
-            backStack = listOf(RootRoute).let { stack ->
-                if (isVideoActive && isVideoFullscreen) stack + VideoRoute else stack
-            },
+            backStack = if (isVideoActive) backStack + VideoRoute else backStack,
             onBack = {
-                if (isVideoActive && isVideoFullscreen) {
-                    isVideoFullscreen = false
+                if (isVideoActive) {
+                    videoViewModel.stop()
+                } else {
+                    backStack.removeLastOrNull()
                 }
             },
+            entryDecorators = listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                rememberViewModelStoreNavEntryDecorator()
+            ),
             transitionSpec = {
-                slideInVertically { it } togetherWith
-                        ExitTransition.KeepUntilTransitionsFinished
+                slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 2 }
             },
             popTransitionSpec = {
-                EnterTransition.None togetherWith slideOutVertically { it }
+                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
             },
             predictivePopTransitionSpec = {
-                EnterTransition.None togetherWith slideOutVertically { it }
+                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
             },
             entryProvider = entryProvider {
-                entry<RootRoute> {
-                    Scaffold(
-                        bottomBar = {
-                            if (isVideoActive) {
-                                VideoNowPlayingBar(
-                                    viewModel = videoViewModel,
-                                    onClick = { isVideoFullscreen = true }
-                                )
-                            }
+                entry<SearchRoute> {
+                    SearchScreen(
+                        viewModel = koinViewModel(),
+                        onPlayVideo = videoViewModel::play,
+                        onNavigateToChannel = { id ->
+                            backStack += ChannelRoute(id)
+                            videoViewModel.stop()
                         },
-                        contentWindowInsets = WindowInsets(0)
-                    ) { contentPadding ->
-                        NavDisplay(
-                            backStack = backStack,
-                            modifier = Modifier
-                                .padding(contentPadding)
-                                .consumeWindowInsets(contentPadding),
-                            entryDecorators = listOf(
-                                rememberSaveableStateHolderNavEntryDecorator(),
-                                rememberViewModelStoreNavEntryDecorator()
-                            ),
-                            transitionSpec = {
-                                slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 2 }
-                            },
-                            popTransitionSpec = {
-                                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
-                            },
-                            predictivePopTransitionSpec = {
-                                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
-                            },
-                            entryProvider = entryProvider {
-                                entry<SearchRoute> {
-                                    SearchScreen(
-                                        viewModel = koinViewModel(),
-                                        onPlayVideo = { id, mode ->
-                                            videoViewModel.play(id)
-                                            isVideoFullscreen = mode == VideoPlayMode.FOREGROUND
-                                        },
-                                        onNavigateToChannel = { id ->
-                                            backStack += ChannelRoute(id)
-                                            isVideoFullscreen = false
-                                        },
-                                        onNavigateToPlaylist = { id ->
-                                            backStack += PlaylistRoute(id)
-                                            isVideoFullscreen = false
-                                        }
-                                    )
-                                }
-
-                                entry<ChannelRoute> { (id) ->
-                                    ChannelScreen(
-                                        viewModel = koinViewModel { parametersOf(id) },
-                                        onPlayVideo = { id, mode ->
-                                            videoViewModel.play(id)
-                                            isVideoFullscreen = mode == VideoPlayMode.FOREGROUND
-                                        }
-                                    )
-                                }
-
-                                entry<PlaylistRoute> { (id) ->
-                                    PlaylistScreen(
-                                        viewModel = koinViewModel { parametersOf(id) },
-                                        onPlayVideo = { id, mode ->
-                                            videoViewModel.play(id)
-                                            isVideoFullscreen = mode == VideoPlayMode.FOREGROUND
-                                        },
-                                        onNavigateToChannel = { id ->
-                                            backStack += ChannelRoute(id)
-                                            isVideoFullscreen = false
-                                        }
-                                    )
-                                }
-                            }
-                        )
-                    }
+                        onNavigateToPlaylist = { id ->
+                            backStack += PlaylistRoute(id)
+                            videoViewModel.stop()
+                        }
+                    )
                 }
 
-                entry<VideoRoute> {
+                entry<VideoRoute>(
+                    metadata = NavDisplay.transitionSpec {
+                        slideInVertically { it } togetherWith
+                                ExitTransition.KeepUntilTransitionsFinished
+                    } + NavDisplay.popTransitionSpec {
+                        EnterTransition.None togetherWith slideOutVertically { it }
+                    } + NavDisplay.predictivePopTransitionSpec {
+                        EnterTransition.None togetherWith slideOutVertically { it }
+                    }
+                ) {
                     VideoScreen(viewModel = videoViewModel)
+                }
+
+                entry<ChannelRoute> { (id) ->
+                    ChannelScreen(
+                        viewModel = koinViewModel { parametersOf(id) },
+                        onPlayVideo = videoViewModel::play
+                    )
+                }
+
+                entry<PlaylistRoute> { (id) ->
+                    PlaylistScreen(
+                        viewModel = koinViewModel { parametersOf(id) },
+                        onPlayVideo = videoViewModel::play,
+                        onNavigateToChannel = { id ->
+                            backStack += ChannelRoute(id)
+                            videoViewModel.stop()
+                        }
+                    )
                 }
             }
         )
