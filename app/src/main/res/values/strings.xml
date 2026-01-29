@@ -9,7 +9,6 @@
     <string name="label_channels">Channels</string>
     <string name="label_go_to_channel">Go to channel</string>
     <string name="label_live">Live</string>
-    <string name="label_play_in_background">Play in background</string>
     <string name="label_playlist">Playlist</string>
     <string name="label_playlists">Playlists</string>
     <string name="label_retry">Retry</string>
