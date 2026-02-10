@@ -3,6 +3,7 @@
     <string name="app_name">WayTube</string>
     <string name="cd_back">返回</string>
     <string name="cd_clear">清除</string>
+    <string name="cd_more_options">更多選項</string> <!-- ai -->
     <string name="cd_selected">已選取</string>
     <string name="cd_stop">停止</string>
     <string name="label_channel">頻道</string>

@@ -40,6 +40,7 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
+import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.UiState
@@ -105,6 +106,13 @@ private fun PlaylistScreenContent(
                 },
                 title = {
                     Text(text = stringResource(R.string.label_playlist))
+                },
+                actions = {
+                    ((playlistState() as? UiState.Data)?.data as? Playlist.Content)?.let { playlist ->
+                        MoreOptionsMenu(
+                            onShare = { onShare(playlist.url) }
+                        )
+                    }
                 },
                 scrollBehavior = topAppBarScrollBehavior
             )
@@ -244,6 +252,7 @@ private fun PlaylistScreenContentPreview() {
                 UiState.Data(
                     Playlist.Content(
                         id = "",
+                        url = "",
                         title = "Example playlist",
                         channelName = "Example channel",
                         thumbnailUrl = "",

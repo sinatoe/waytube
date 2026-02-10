@@ -39,6 +39,7 @@ class NewPipePlaylistRepository : PlaylistRepository {
 
 private fun PlaylistInfo.toPlaylist(): Playlist = Playlist.Content(
     id = id,
+    url = url,
     title = name,
     channelName = uploaderName,
     thumbnailUrl = thumbnails.maxBy { it.height }.url,

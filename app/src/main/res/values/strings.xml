@@ -3,6 +3,7 @@
     <string name="app_name">WayTube</string>
     <string name="cd_back">Back</string>
     <string name="cd_clear">Clear</string>
+    <string name="cd_more_options">More options</string>
     <string name="cd_selected">Selected</string>
     <string name="cd_stop">Stop</string>
     <string name="label_channel">Channel</string>

@@ -41,6 +41,7 @@ class NewPipeChannelRepository : ChannelRepository {
 
 private fun ChannelInfo.toChannel() = Channel.Content(
     id = id,
+    url = url,
     name = name,
     avatarUrl = avatars.maxBy { it.height }.url,
     bannerUrl = banners.maxByOrNull { it.height }?.url,
