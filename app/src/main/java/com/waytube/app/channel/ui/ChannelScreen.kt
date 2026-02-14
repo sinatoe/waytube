@@ -21,15 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +41,7 @@ import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
-import com.waytube.app.common.ui.ItemMenuSheet
+import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
@@ -86,15 +83,6 @@ private fun ChannelScreenContent(
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    var selectedMenuItem by remember { mutableStateOf<VideoItem?>(null) }
-
-    selectedMenuItem?.let { item ->
-        ItemMenuSheet(
-            onDismissRequest = { selectedMenuItem = null },
-            onShare = { onShare(item.url) }
-        )
-    }
-
     Scaffold(
         modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
         topBar = {
@@ -108,7 +96,13 @@ private fun ChannelScreenContent(
                 actions = {
                     ((channelState() as? UiState.Data)?.data as? Channel.Content)?.let { channel ->
                         MoreOptionsMenu(
-                            onShare = { onShare(channel.url) }
+                            actions = listOf(
+                                MenuAction(
+                                    label = stringResource(R.string.label_share),
+                                    iconPainter = painterResource(R.drawable.ic_share),
+                                    onClick = { onShare(channel.url) }
+                                )
+                            )
                         )
                     }
                 },
@@ -170,7 +164,13 @@ private fun ChannelScreenContent(
                                 VideoItemCard(
                                     item = item,
                                     onClick = { onPlayVideo(item.id) },
-                                    onLongClick = { selectedMenuItem = item }
+                                    menuActions = listOf(
+                                        MenuAction(
+                                            label = stringResource(R.string.label_share),
+                                            iconPainter = painterResource(R.drawable.ic_share),
+                                            onClick = { onShare(item.url) }
+                                        )
+                                    )
                                 )
                             }
                         }

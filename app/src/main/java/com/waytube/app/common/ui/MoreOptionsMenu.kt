@@ -18,7 +18,7 @@ import com.waytube.app.R
 
 @Composable
 fun MoreOptionsMenu(
-    onShare: () -> Unit,
+    actions: List<MenuAction>,
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -35,19 +35,21 @@ fun MoreOptionsMenu(
             expanded = isExpanded,
             onDismissRequest = { isExpanded = false }
         ) {
-            DropdownMenuItem(
-                text = { Text(text = stringResource(R.string.label_share)) },
-                onClick = {
-                    onShare()
-                    isExpanded = false
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_share),
-                        contentDescription = null
-                    )
-                }
-            )
+            for ((label, iconPainter, onClick) in actions) {
+                DropdownMenuItem(
+                    text = { Text(text = label) },
+                    onClick = {
+                        onClick()
+                        isExpanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = iconPainter,
+                            contentDescription = null
+                        )
+                    },
+                )
+            }
         }
     }
 }
