@@ -118,7 +118,8 @@ private fun ItemMenuSheet(
     val scope = rememberCoroutineScope()
 
     ModalBottomSheet(
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState
     ) {
         for ((label, iconPainter, onClick) in actions) {
             ListItem(
