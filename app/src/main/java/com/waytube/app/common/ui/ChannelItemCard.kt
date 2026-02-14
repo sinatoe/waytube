@@ -19,12 +19,12 @@ import com.waytube.app.common.domain.ChannelItem
 fun ChannelItemCard(
     item: ChannelItem,
     onClick: () -> Unit,
-    menuActions: List<MenuAction>,
+    onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     ItemCardBase(
         onClick = onClick,
-        menuActions = menuActions,
+        onLongClick = onLongClick,
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         imageContent = {
@@ -74,7 +74,7 @@ private fun ChannelItemCardPreview() {
                 subscriberCount = 12_345
             ),
             onClick = {},
-            menuActions = emptyList()
+            onLongClick = null
         )
     }
 }

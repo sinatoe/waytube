@@ -32,7 +32,10 @@ import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +53,7 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ChannelItemCard
+import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.PlaylistItemCard
 import com.waytube.app.common.ui.VideoItemCard
@@ -110,6 +114,40 @@ private fun SearchScreenContent(
 ) {
     val searchBarState = rememberSearchBarState()
     val scope = rememberCoroutineScope()
+
+    var selectedResult by retain { mutableStateOf<SearchResult?>(null) }
+
+    selectedResult?.let { result ->
+        ItemMenuSheet(
+            actions = listOfNotNull(
+                MenuAction(
+                    label = stringResource(R.string.label_share),
+                    iconPainter = painterResource(R.drawable.ic_share),
+                    onClick = {
+                        onShare(
+                            when (result) {
+                                is SearchResult.Video -> result.item.url
+                                is SearchResult.Channel -> result.item.url
+                                is SearchResult.Playlist -> result.item.url
+                            }
+                        )
+                    }
+                ),
+                when (result) {
+                    is SearchResult.Video -> result.item.channelId
+                    is SearchResult.Channel -> null
+                    is SearchResult.Playlist -> result.item.channelId
+                }?.let { id ->
+                    MenuAction(
+                        label = stringResource(R.string.label_go_to_channel),
+                        iconPainter = painterResource(R.drawable.ic_person),
+                        onClick = { onNavigateToChannel(id) }
+                    )
+                }
+            ),
+            onDismissRequest = { selectedResult = null }
+        )
+    }
 
     val inputField = @Composable {
         SearchBarDefaults.InputField(
@@ -254,20 +292,7 @@ private fun SearchScreenContent(
                             VideoItemCard(
                                 item = result.item,
                                 onClick = { onPlayVideo(result.id) },
-                                menuActions = listOfNotNull(
-                                    MenuAction(
-                                        label = stringResource(R.string.label_share),
-                                        iconPainter = painterResource(R.drawable.ic_share),
-                                        onClick = { onShare(result.item.url) }
-                                    ),
-                                    result.item.channelId?.let { id ->
-                                        MenuAction(
-                                            label = stringResource(R.string.label_go_to_channel),
-                                            iconPainter = painterResource(R.drawable.ic_person),
-                                            onClick = { onNavigateToChannel(id) }
-                                        )
-                                    }
-                                )
+                                onLongClick = { selectedResult = result }
                             )
                         }
 
@@ -275,13 +300,7 @@ private fun SearchScreenContent(
                             ChannelItemCard(
                                 item = result.item,
                                 onClick = { onNavigateToChannel(result.id) },
-                                menuActions = listOf(
-                                    MenuAction(
-                                        label = stringResource(R.string.label_share),
-                                        iconPainter = painterResource(R.drawable.ic_share),
-                                        onClick = { onShare(result.item.url) }
-                                    )
-                                )
+                                onLongClick = { selectedResult = result }
                             )
                         }
 
@@ -289,20 +308,7 @@ private fun SearchScreenContent(
                             PlaylistItemCard(
                                 item = result.item,
                                 onClick = { onNavigateToPlaylist(result.id) },
-                                menuActions = listOfNotNull(
-                                    MenuAction(
-                                        label = stringResource(R.string.label_share),
-                                        iconPainter = painterResource(R.drawable.ic_share),
-                                        onClick = { onShare(result.item.url) }
-                                    ),
-                                    result.item.channelId?.let { id ->
-                                        MenuAction(
-                                            label = stringResource(R.string.label_go_to_channel),
-                                            iconPainter = painterResource(R.drawable.ic_person),
-                                            onClick = { onNavigateToChannel(id) }
-                                        )
-                                    }
-                                )
+                                onLongClick = { selectedResult = result }
                             )
                         }
                     }

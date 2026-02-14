@@ -18,12 +18,12 @@ import com.waytube.app.common.domain.PlaylistItem
 fun PlaylistItemCard(
     item: PlaylistItem,
     onClick: () -> Unit,
-    menuActions: List<MenuAction>,
+    onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     ItemCardBase(
         onClick = onClick,
-        menuActions = menuActions,
+        onLongClick = onLongClick,
         modifier = modifier,
         imageOverlayText = stringResource(R.string.label_playlist),
         imageContent = {
@@ -81,7 +81,7 @@ private fun PlaylistItemCardPreview() {
                 videoCount = 123
             ),
             onClick = {},
-            menuActions = emptyList()
+            onLongClick = null
         )
     }
 }

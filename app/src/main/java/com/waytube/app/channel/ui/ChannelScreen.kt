@@ -21,6 +21,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +45,7 @@ import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
+import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.StateMessage
@@ -82,6 +87,21 @@ private fun ChannelScreenContent(
     onPlayVideo: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    var selectedItem by retain { mutableStateOf<VideoItem?>(null) }
+
+    selectedItem?.let { item ->
+        ItemMenuSheet(
+            actions = listOf(
+                MenuAction(
+                    label = stringResource(R.string.label_share),
+                    iconPainter = painterResource(R.drawable.ic_share),
+                    onClick = { onShare(item.url) }
+                )
+            ),
+            onDismissRequest = { selectedItem = null }
+        )
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
@@ -164,13 +184,7 @@ private fun ChannelScreenContent(
                                 VideoItemCard(
                                     item = item,
                                     onClick = { onPlayVideo(item.id) },
-                                    menuActions = listOf(
-                                        MenuAction(
-                                            label = stringResource(R.string.label_share),
-                                            iconPainter = painterResource(R.drawable.ic_share),
-                                            onClick = { onShare(item.url) }
-                                        )
-                                    )
+                                    onLongClick = { selectedItem = item }
                                 )
                             }
                         }

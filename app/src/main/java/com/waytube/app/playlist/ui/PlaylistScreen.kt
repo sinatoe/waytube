@@ -17,6 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +40,7 @@ import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
 import com.waytube.app.common.ui.BackButton
+import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.StateMessage
@@ -81,6 +86,28 @@ private fun PlaylistScreenContent(
     onNavigateToChannel: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    var selectedItem by retain { mutableStateOf<VideoItem?>(null) }
+
+    selectedItem?.let { item ->
+        ItemMenuSheet(
+            actions = listOfNotNull(
+                MenuAction(
+                    label = stringResource(R.string.label_share),
+                    iconPainter = painterResource(R.drawable.ic_share),
+                    onClick = { onShare(item.url) }
+                ),
+                item.channelId?.let { id ->
+                    MenuAction(
+                        label = stringResource(R.string.label_go_to_channel),
+                        iconPainter = painterResource(R.drawable.ic_person),
+                        onClick = { onNavigateToChannel(id) }
+                    )
+                }
+            ),
+            onDismissRequest = { selectedItem = null }
+        )
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
@@ -163,20 +190,7 @@ private fun PlaylistScreenContent(
                                 VideoItemCard(
                                     item = item,
                                     onClick = { onPlayVideo(item.id) },
-                                    menuActions = listOfNotNull(
-                                        MenuAction(
-                                            label = stringResource(R.string.label_share),
-                                            iconPainter = painterResource(R.drawable.ic_share),
-                                            onClick = { onShare(item.url) }
-                                        ),
-                                        item.channelId?.let { id ->
-                                            MenuAction(
-                                                label = stringResource(R.string.label_go_to_channel),
-                                                iconPainter = painterResource(R.drawable.ic_person),
-                                                onClick = { onNavigateToChannel(id) }
-                                            )
-                                        }
-                                    )
+                                    onLongClick = { selectedItem = item }
                                 )
                             }
                         }
