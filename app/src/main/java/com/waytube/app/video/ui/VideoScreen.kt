@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +28,7 @@ fun VideoScreen(viewModel: VideoViewModel) {
     VideoScreenContent(
         videoState = viewModel.videoState.collectAsStateWithLifecycle()::value,
         player = viewModel.player.collectAsStateWithLifecycle(initialValue = null)::value,
+        isPlaying = viewModel.isPlaying.collectAsStateWithLifecycle()::value,
         onRetry = viewModel::retry
     )
 }
@@ -35,6 +37,7 @@ fun VideoScreen(viewModel: VideoViewModel) {
 private fun VideoScreenContent(
     videoState: () -> UiState<Video>?,
     player: () -> Player?,
+    isPlaying: () -> Boolean,
     onRetry: () -> Unit
 ) {
     MaterialTheme(colorScheme = AppColorScheme.Dark) {
@@ -108,7 +111,10 @@ private fun VideoScreenContent(
                                 AndroidView(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(contentPadding),
+                                        .padding(contentPadding)
+                                        .then(
+                                            if (isPlaying()) Modifier.keepScreenOn() else Modifier
+                                        ),
                                     factory = { context ->
                                         PlayerView(context).apply {
                                             this.player = player

@@ -32,8 +32,7 @@ class MainActivity : ComponentActivity() {
                 NavigationHost(
                     viewModel = navigationViewModel,
                     videoViewModel = videoViewModel,
-                    onSetVideoImmersiveMode = ::setVideoImmersiveMode,
-                    onKeepScreenAwake = ::keepScreenAwake
+                    onSetVideoImmersiveMode = ::setVideoImmersiveMode
                 )
             }
         }
@@ -57,9 +56,5 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
-    }
-
-    private fun keepScreenAwake(enabled: Boolean) {
-        window.decorView.keepScreenOn = enabled
     }
 }

@@ -45,11 +45,9 @@ private data class PlaylistRoute(val id: String) : NavKey
 fun NavigationHost(
     viewModel: NavigationViewModel,
     videoViewModel: VideoViewModel,
-    onSetVideoImmersiveMode: (Boolean) -> Unit,
-    onKeepScreenAwake: (Boolean) -> Unit
+    onSetVideoImmersiveMode: (Boolean) -> Unit
 ) {
     val isVideoActive by videoViewModel.isActive.collectAsStateWithLifecycle()
-    val isVideoPlaying by videoViewModel.isPlaying.collectAsStateWithLifecycle()
 
     val backStack = rememberNavBackStack(SearchRoute)
 
@@ -78,14 +76,6 @@ fun NavigationHost(
             onSetVideoImmersiveMode(true)
 
             onDispose { onSetVideoImmersiveMode(false) }
-        }
-    }
-
-    if (isVideoActive && isVideoPlaying) {
-        DisposableEffect(Unit) {
-            onKeepScreenAwake(true)
-
-            onDispose { onKeepScreenAwake(false) }
         }
     }
 
