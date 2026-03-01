@@ -29,18 +29,20 @@ class NewPipeSearchRepository : SearchRepository {
 
     override fun getResults(query: String, filter: SearchFilter?): Flow<PagingData<SearchResult>> =
         NewPipePagingSource.createFlow(
-            extractor = ServiceList.YouTube.getSearchExtractor(
-                query,
-                listOfNotNull(
-                    when (filter) {
-                        SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
-                        SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
-                        SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
-                        null -> null
-                    },
-                ),
-                null
-            ),
+            extractorFactory = {
+                ServiceList.YouTube.getSearchExtractor(
+                    query,
+                    listOfNotNull(
+                        when (filter) {
+                            SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
+                            SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
+                            SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
+                            null -> null
+                        },
+                    ),
+                    null
+                )
+            },
             transform = { item ->
                 when (item) {
                     is StreamInfoItem -> item.toVideoItem()?.let(SearchResult::Video)

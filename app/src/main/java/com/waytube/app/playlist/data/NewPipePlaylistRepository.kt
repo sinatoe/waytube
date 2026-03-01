@@ -32,7 +32,7 @@ class NewPipePlaylistRepository : PlaylistRepository {
 
     override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
         NewPipePagingSource.createFlow(
-            extractor = ServiceList.YouTube.getPlaylistExtractor(id, emptyList(), null),
+            extractorFactory = { ServiceList.YouTube.getPlaylistExtractor(id, emptyList(), null) },
             transform = { it.toVideoItem() }
         )
 }

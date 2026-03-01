@@ -47,7 +47,7 @@ class NewPipePagingSource<T : InfoItem, R : Identifiable>(
 
     companion object {
         fun <T : InfoItem, R : Identifiable> createFlow(
-            extractor: ListExtractor<T>,
+            extractorFactory: () -> ListExtractor<T>,
             transform: (T) -> R?,
             onLoadError: ((Throwable) -> LoadResult<Page, R>?)? = null
         ): Flow<PagingData<R>> {
@@ -55,7 +55,7 @@ class NewPipePagingSource<T : InfoItem, R : Identifiable>(
                 config = PagingConfig(pageSize = 20, enablePlaceholders = false),
                 pagingSourceFactory = {
                     NewPipePagingSource(
-                        extractor = extractor,
+                        extractor = extractorFactory(),
                         transform = transform,
                         onLoadError = onLoadError
                     )
