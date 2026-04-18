@@ -33,9 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
@@ -43,17 +40,17 @@ import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
+import com.waytube.app.common.ui.PagedList
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagingItems
+import com.waytube.app.common.ui.pagedItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
 import com.waytube.app.common.ui.toPluralCount
 import com.waytube.app.playlist.domain.Playlist
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
@@ -67,8 +64,9 @@ fun PlaylistScreen(
 ) {
     PlaylistScreenContent(
         playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
-        videoItems = viewModel.videoItems.collectAsLazyPagingItems(),
+        videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
         onRetry = viewModel::retry,
+        onLoadVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
         onNavigateToChannel = onNavigateToChannel
@@ -79,8 +77,9 @@ fun PlaylistScreen(
 @Composable
 private fun PlaylistScreenContent(
     playlistState: () -> UiState<Playlist>,
-    videoItems: LazyPagingItems<VideoItem>,
+    videoItems: () -> PagedList<VideoItem>?,
     onRetry: () -> Unit,
+    onLoadVideoItems: () -> Unit,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
@@ -186,12 +185,17 @@ private fun PlaylistScreenContent(
                                 PlaylistScreenCard(playlist = playlist)
                             }
 
-                            pagingItems(videoItems) { item ->
-                                VideoItemCard(
-                                    item = item,
-                                    onClick = { onPlayVideo(item.id) },
-                                    onLongClick = { selectedItem = item }
-                                )
+                            videoItems()?.let {
+                                pagedItems(
+                                    list = it,
+                                    onLoad = onLoadVideoItems
+                                ) { item ->
+                                    VideoItemCard(
+                                        item = item,
+                                        onClick = { onPlayVideo(item.id) },
+                                        onLongClick = { selectedItem = item }
+                                    )
+                                }
                             }
                         }
                     }
@@ -246,24 +250,6 @@ private fun PlaylistScreenCard(playlist: Playlist.Content) {
 @PreviewLightDark
 @Composable
 private fun PlaylistScreenContentPreview() {
-    val videoItems = MutableStateFlow(
-        PagingData.from<VideoItem>(
-            (1..10).map { n ->
-                VideoItem.Regular(
-                    id = n.toString(),
-                    url = "",
-                    title = "Example video",
-                    channelId = "",
-                    channelName = "Example channel",
-                    thumbnailUrl = "",
-                    duration = 12.minutes + 34.seconds,
-                    viewCount = 1_234_567L,
-                    uploadedAt = Clock.System.now() - 14.days
-                )
-            }
-        )
-    ).collectAsLazyPagingItems()
-
     AppTheme {
         PlaylistScreenContent(
             playlistState = {
@@ -278,8 +264,26 @@ private fun PlaylistScreenContentPreview() {
                     )
                 )
             },
-            videoItems = videoItems,
+            videoItems = {
+                PagedList(
+                    items = (1..10).map { n ->
+                        VideoItem.Regular(
+                            id = n.toString(),
+                            url = "",
+                            title = "Example video",
+                            channelId = "",
+                            channelName = "Example channel",
+                            thumbnailUrl = "",
+                            duration = 12.minutes + 34.seconds,
+                            viewCount = 1_234_567L,
+                            uploadedAt = Clock.System.now() - 14.days
+                        )
+                    },
+                    state = PagedList.State.Done
+                )
+            },
             onRetry = {},
+            onLoadVideoItems = {},
             onShare = {},
             onPlayVideo = {},
             onNavigateToChannel = {}

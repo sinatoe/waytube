@@ -2,8 +2,7 @@ package com.waytube.app.playlist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
+import com.waytube.app.common.ui.PagedListLoader
 import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.UiStateLoader
 import com.waytube.app.playlist.domain.Playlist
@@ -24,6 +23,8 @@ class PlaylistViewModel(
 ) : ViewModel() {
     private val playlistLoader = UiStateLoader()
 
+    private val videoItemsLoader = PagedListLoader()
+
     val playlistState = playlistLoader
         .bind { repository.getPlaylist(id) }
         .stateIn(
@@ -36,11 +37,21 @@ class PlaylistViewModel(
         .map { ((it as? UiState.Data)?.data as? Playlist.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
-            if (id != null) repository.getVideoItems(id) else flowOf(PagingData.empty())
+            if (id != null) {
+                videoItemsLoader.bind { repository.getVideoItems(id) }
+            } else flowOf(null)
         }
-        .cachedIn(viewModelScope)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 
     fun retry() {
         viewModelScope.launch { playlistLoader.retry() }
+    }
+
+    fun loadVideoItems() {
+        viewModelScope.launch { videoItemsLoader.load() }
     }
 }

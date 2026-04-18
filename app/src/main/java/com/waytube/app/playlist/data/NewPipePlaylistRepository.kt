@@ -1,13 +1,12 @@
 package com.waytube.app.playlist.data
 
-import androidx.paging.PagingData
-import com.waytube.app.common.data.NewPipePagingSource
+import com.waytube.app.common.data.paginate
 import com.waytube.app.common.data.toVideoItem
+import com.waytube.app.common.domain.Page
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.playlist.domain.Playlist
 import com.waytube.app.playlist.domain.PlaylistRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
@@ -30,11 +29,10 @@ class NewPipePlaylistRepository : PlaylistRepository {
             }
         }
 
-    override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
-        NewPipePagingSource.createFlow(
-            extractorFactory = { ServiceList.YouTube.getPlaylistExtractor(id, emptyList(), null) },
-            transform = { it.toVideoItem() }
-        )
+    override suspend fun getVideoItems(id: String): Result<Page<VideoItem>> =
+        ServiceList.YouTube
+            .getPlaylistExtractor(id, emptyList(), null)
+            .paginate { it.toVideoItem() }
 }
 
 private fun PlaylistInfo.toPlaylist(): Playlist = Playlist.Content(

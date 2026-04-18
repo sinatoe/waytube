@@ -2,10 +2,9 @@ package com.waytube.app.channel.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
+import com.waytube.app.common.ui.PagedListLoader
 import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.UiStateLoader
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +23,8 @@ class ChannelViewModel(
 ) : ViewModel() {
     private val channelLoader = UiStateLoader()
 
+    val videoItemsLoader = PagedListLoader()
+
     val channelState = channelLoader
         .bind { repository.getChannel(id) }
         .stateIn(
@@ -36,11 +37,21 @@ class ChannelViewModel(
         .map { ((it as? UiState.Data)?.data as? Channel.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
-            if (id != null) repository.getVideoItems(id) else flowOf(PagingData.empty())
+            if (id != null) {
+                videoItemsLoader.bind { repository.getVideoItems(id) }
+            } else flowOf(null)
         }
-        .cachedIn(viewModelScope)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 
     fun retry() {
         viewModelScope.launch { channelLoader.retry() }
+    }
+
+    fun loadVideoItems() {
+        viewModelScope.launch { videoItemsLoader.load() }
     }
 }

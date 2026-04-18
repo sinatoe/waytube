@@ -4,7 +4,7 @@ import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.cachedIn
+import com.waytube.app.common.ui.PagedListLoader
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -46,6 +47,8 @@ class SearchViewModel(
         key = "search_state",
         initialValue = null
     )
+
+    val resultsLoader = PagedListLoader()
 
     val suggestions = suggestionsQuery
         .debounce { if (it.isNotEmpty()) REMOTE_SUGGESTIONS_DEBOUNCE else Duration.ZERO }
@@ -93,8 +96,14 @@ class SearchViewModel(
 
     val results = searchState
         .filterNotNull()
-        .flatMapLatest { (query, filter) -> repository.getResults(query, filter) }
-        .cachedIn(viewModelScope)
+        .flatMapLatest { (query, filter) ->
+            resultsLoader.bind { repository.getResults(query, filter) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 
     init {
         searchState
@@ -120,6 +129,12 @@ class SearchViewModel(
     fun toggleFilter(filter: SearchFilter) {
         searchState.update { state ->
             state?.copy(filter = filter.takeIf { state.filter != it }) ?: state
+        }
+    }
+
+    fun loadResults() {
+        viewModelScope.launch {
+            resultsLoader.load()
         }
     }
 
