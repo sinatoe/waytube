@@ -4,7 +4,7 @@ import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.waytube.app.common.ui.PagedListLoader
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -23,11 +22,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 @Parcelize
 private data class SearchState(
@@ -47,8 +44,6 @@ class SearchViewModel(
         key = "search_state",
         initialValue = null
     )
-
-    val resultsLoader = PagedListLoader()
 
     val suggestions = suggestionsQuery
         .debounce { if (it.isNotEmpty()) REMOTE_SUGGESTIONS_DEBOUNCE else Duration.ZERO }
@@ -78,14 +73,6 @@ class SearchViewModel(
             )
         )
 
-    val isSearchSubmitted = searchState
-        .map { it != null }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5.seconds),
-            initialValue = false
-        )
-
     val selectedFilter = searchState
         .map { it?.filter }
         .stateIn(
@@ -97,7 +84,7 @@ class SearchViewModel(
     val results = searchState
         .filterNotNull()
         .flatMapLatest { (query, filter) ->
-            resultsLoader.bind { repository.getResults(query, filter) }
+            PaginatedData.createFlow { repository.getResults(query, filter) }
         }
         .stateIn(
             scope = viewModelScope,
@@ -129,12 +116,6 @@ class SearchViewModel(
     fun toggleFilter(filter: SearchFilter) {
         searchState.update { state ->
             state?.copy(filter = filter.takeIf { state.filter != it }) ?: state
-        }
-    }
-
-    fun loadResults() {
-        viewModelScope.launch {
-            resultsLoader.load()
         }
     }
 

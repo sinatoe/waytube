@@ -87,19 +87,12 @@ private fun VideoScreenContent(
                                             Video.Unavailable.Reason.AGE_RESTRICTED ->
                                                 R.string.message_video_age_restricted
 
-                                            Video.Unavailable.Reason.IP_ADDRESS_BLOCKED ->
-                                                R.string.message_video_ip_address_blocked
-
                                             Video.Unavailable.Reason.UNSUPPORTED ->
                                                 R.string.message_video_unsupported
 
                                             null -> R.string.message_video_unavailable
                                         }
-                                    ),
-                                    onRetry = when (video.reason) {
-                                        Video.Unavailable.Reason.IP_ADDRESS_BLOCKED -> onRetry
-                                        else -> null
-                                    }
+                                    )
                                 )
                             }
                         }

@@ -46,12 +46,12 @@ import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
-import com.waytube.app.common.ui.PagedList
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.common.ui.RefreshState
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagedItems
+import com.waytube.app.common.ui.paginatedItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
@@ -69,7 +69,6 @@ fun ChannelScreen(
     ChannelScreenContent(
         channelState = viewModel.channelState.collectAsStateWithLifecycle()::value,
         videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
-        onLoadVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo
     )
@@ -79,8 +78,7 @@ fun ChannelScreen(
 @Composable
 private fun ChannelScreenContent(
     channelState: () -> AsyncState<Channel>,
-    videoItems: () -> PagedList<VideoItem>?,
-    onLoadVideoItems: () -> Unit,
+    videoItems: () -> PaginatedData<VideoItem>?,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit
 ) {
@@ -179,10 +177,7 @@ private fun ChannelScreenContent(
                             }
 
                             videoItems()?.let {
-                                pagedItems(
-                                    list = it,
-                                    onLoad = onLoadVideoItems
-                                ) { item ->
+                                paginatedItems(it) { item ->
                                     VideoItemCard(
                                         item = item,
                                         onClick = { onPlayVideo(item.id) },
@@ -270,7 +265,7 @@ private fun ChannelScreenContentPreview() {
                 )
             },
             videoItems = {
-                PagedList(
+                PaginatedData(
                     items = (1..10).map { n ->
                         VideoItem.Regular(
                             id = n.toString(),
@@ -284,10 +279,9 @@ private fun ChannelScreenContentPreview() {
                             uploadedAt = Clock.System.now() - 14.days
                         )
                     },
-                    state = PagedList.State.Done
+                    state = PaginatedData.State.Done
                 )
             },
-            onLoadVideoItems = {},
             onShare = {},
             onPlayVideo = {}
         )

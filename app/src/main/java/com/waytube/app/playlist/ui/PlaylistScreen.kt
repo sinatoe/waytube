@@ -41,12 +41,12 @@ import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
-import com.waytube.app.common.ui.PagedList
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.common.ui.RefreshState
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagedItems
+import com.waytube.app.common.ui.paginatedItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
@@ -66,7 +66,6 @@ fun PlaylistScreen(
     PlaylistScreenContent(
         playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
         videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
-        onLoadVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
         onNavigateToChannel = onNavigateToChannel
@@ -77,8 +76,7 @@ fun PlaylistScreen(
 @Composable
 private fun PlaylistScreenContent(
     playlistState: () -> AsyncState<Playlist>,
-    videoItems: () -> PagedList<VideoItem>?,
-    onLoadVideoItems: () -> Unit,
+    videoItems: () -> PaginatedData<VideoItem>?,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
@@ -185,10 +183,7 @@ private fun PlaylistScreenContent(
                             }
 
                             videoItems()?.let {
-                                pagedItems(
-                                    list = it,
-                                    onLoad = onLoadVideoItems
-                                ) { item ->
+                                paginatedItems(it) { item ->
                                     VideoItemCard(
                                         item = item,
                                         onClick = { onPlayVideo(item.id) },
@@ -265,7 +260,7 @@ private fun PlaylistScreenContentPreview() {
                 )
             },
             videoItems = {
-                PagedList(
+                PaginatedData(
                     items = (1..10).map { n ->
                         VideoItem.Regular(
                             id = n.toString(),
@@ -279,10 +274,9 @@ private fun PlaylistScreenContentPreview() {
                             uploadedAt = Clock.System.now() - 14.days
                         )
                     },
-                    state = PagedList.State.Done
+                    state = PaginatedData.State.Done
                 )
             },
-            onLoadVideoItems = {},
             onShare = {},
             onPlayVideo = {},
             onNavigateToChannel = {}

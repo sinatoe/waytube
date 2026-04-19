@@ -15,24 +15,23 @@ import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.Identifiable
 
-fun <T : Identifiable> LazyListScope.pagedItems(
-    list: PagedList<T>,
-    onLoad: () -> Unit,
+fun <T : Identifiable> LazyListScope.paginatedItems(
+    data: PaginatedData<T>,
     itemContent: @Composable (T) -> Unit
 ) {
     items(
-        items = list.items,
+        items = data.items,
         key = { it.id }
     ) {
         itemContent(it)
     }
 
-    when (val state = list.state) {
-        is PagedList.State.HasMore -> {
+    when (val state = data.state) {
+        is PaginatedData.State.Loading, is PaginatedData.State.Idle -> {
             item {
-                if (!state.isLoading) {
+                if (state is PaginatedData.State.Idle) {
                     LaunchedEffect(Unit) {
-                        onLoad()
+                        state.load()
                     }
                 }
 
@@ -47,26 +46,26 @@ fun <T : Identifiable> LazyListScope.pagedItems(
             }
         }
 
-        is PagedList.State.Error -> {
+        is PaginatedData.State.Error -> {
             item {
                 StateMessage(
                     text = stringResource(R.string.message_paging_load_error),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
-                    onRetry = onLoad
+                    onRetry = state.retry
                 )
             }
         }
 
-        is PagedList.State.Done -> {
-            if (list.items.isEmpty()) {
+        is PaginatedData.State.Done -> {
+            if (data.items.isEmpty()) {
                 item {
                     StateMessage(
                         text = stringResource(R.string.message_paging_empty),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 16.dp)
                     )
                 }
             }

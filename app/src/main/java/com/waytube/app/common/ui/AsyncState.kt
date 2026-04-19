@@ -36,38 +36,37 @@ sealed interface AsyncState<out T> {
             return trigger
                 .onStart { emit(Unit) }
                 .transformLatest {
-                    emit(null)
-                    emit(fetch())
+                    emit(FetchEvent.Loading)
+                    emit(FetchEvent.fromResult(fetch()))
                 }
-                .runningFold(Loading as AsyncState<T>) { state, result ->
-                    result?.fold(
-                        onSuccess = { data ->
-                            Loaded(
-                                data = data,
-                                refreshState = RefreshState.Idle(refresh = ::notifyTrigger)
+                .runningFold(Loading as AsyncState<T>) { state, event ->
+                    when (event) {
+                        is FetchEvent.Loading -> when (state) {
+                            is Loaded -> state.copy(
+                                refreshState = RefreshState.Refreshing
                             )
-                        },
-                        onFailure = { exception ->
-                            when (state) {
-                                is Loaded -> state.copy(
-                                    refreshState = RefreshState.Error(
-                                        exception = exception,
-                                        retry = ::notifyTrigger
-                                    )
-                                )
 
-                                else -> Error(
-                                    exception = exception,
-                                    retry = ::notifyTrigger
-                                )
-                            }
+                            else -> Loading
                         }
-                    ) ?: when (state) {
-                        is Loaded -> state.copy(
-                            refreshState = RefreshState.Refreshing
+
+                        is FetchEvent.Success -> Loaded(
+                            data = event.data,
+                            refreshState = RefreshState.Idle(refresh = ::notifyTrigger)
                         )
 
-                        else -> Loading
+                        is FetchEvent.Failure -> when (state) {
+                            is Loaded -> state.copy(
+                                refreshState = RefreshState.Error(
+                                    exception = event.exception,
+                                    retry = ::notifyTrigger
+                                )
+                            )
+
+                            else -> Error(
+                                exception = event.exception,
+                                retry = ::notifyTrigger
+                            )
+                        }
                     }
                 }
         }

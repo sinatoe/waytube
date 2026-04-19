@@ -52,10 +52,10 @@ import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ChannelItemCard
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
-import com.waytube.app.common.ui.PagedList
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.common.ui.PlaylistItemCard
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagedItems
+import com.waytube.app.common.ui.paginatedItems
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
@@ -72,7 +72,6 @@ fun SearchScreen(
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
 ) {
-    val isSearchSubmitted by viewModel.isSearchSubmitted.collectAsStateWithLifecycle()
     val textFieldState = rememberTextFieldState()
 
     LaunchedEffect(textFieldState.text) {
@@ -86,7 +85,6 @@ fun SearchScreen(
         results = viewModel.results.collectAsStateWithLifecycle()::value,
         onTrySubmit = viewModel::trySubmit,
         onFilterClick = viewModel::toggleFilter,
-        onLoadResults = viewModel::loadResults,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
         onNavigateToChannel = onNavigateToChannel,
@@ -100,10 +98,9 @@ private fun SearchScreenContent(
     textFieldState: TextFieldState,
     suggestions: () -> SearchSuggestions,
     selectedFilter: () -> SearchFilter?,
-    results: () -> PagedList<SearchResult>?,
+    results: () -> PaginatedData<SearchResult>?,
     onTrySubmit: (String) -> Boolean,
     onFilterClick: (SearchFilter) -> Unit,
-    onLoadResults: () -> Unit,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit,
@@ -283,10 +280,7 @@ private fun SearchScreenContent(
                     }
                 }
 
-                pagedItems(
-                    list = results,
-                    onLoad = onLoadResults
-                ) { result ->
+                paginatedItems(results) { result ->
                     when (result) {
                         is SearchResult.Video -> {
                             VideoItemCard(
@@ -332,7 +326,7 @@ private fun SearchScreenPreview() {
             },
             selectedFilter = { SearchFilter.VIDEOS },
             results = {
-                PagedList(
+                PaginatedData(
                     items = (1..10).map { n ->
                         SearchResult.Video(
                             VideoItem.Regular(
@@ -348,12 +342,11 @@ private fun SearchScreenPreview() {
                             )
                         )
                     },
-                    state = PagedList.State.Done
+                    state = PaginatedData.State.Done
                 )
             },
             onTrySubmit = { true },
             onFilterClick = {},
-            onLoadResults = {},
             onShare = {},
             onPlayVideo = {},
             onNavigateToChannel = {},
