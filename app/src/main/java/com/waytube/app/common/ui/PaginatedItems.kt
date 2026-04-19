@@ -27,7 +27,7 @@ fun <T : Identifiable> LazyListScope.paginatedItems(
     }
 
     when (val state = data.state) {
-        is PaginatedData.State.Loading, is PaginatedData.State.Idle -> {
+        is PaginatedData.State.HasMore -> {
             item {
                 if (state is PaginatedData.State.Idle) {
                     LaunchedEffect(Unit) {

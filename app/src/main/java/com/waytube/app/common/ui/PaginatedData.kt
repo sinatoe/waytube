@@ -14,9 +14,11 @@ data class PaginatedData<T>(
     val state: State
 ) {
     sealed interface State {
-        data object Loading : State
+        sealed interface HasMore : State
 
-        data class Idle(val load: () -> Unit) : State
+        data object Loading : HasMore
+
+        data class Idle(val load: () -> Unit) : HasMore
 
         data class Error(
             val exception: Throwable,
