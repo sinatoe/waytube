@@ -118,7 +118,7 @@ private fun PlaylistScreenContent(
                     Text(text = stringResource(R.string.label_playlist))
                 },
                 actions = {
-                    ((playlistState() as? AsyncState.Data)?.data as? Playlist.Content)?.let { playlist ->
+                    ((playlistState() as? AsyncState.Loaded)?.data as? Playlist.Content)?.let { playlist ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -160,7 +160,7 @@ private fun PlaylistScreenContent(
                 }
             }
 
-            is AsyncState.Data -> {
+            is AsyncState.Loaded -> {
                 when (val playlist = state.data) {
                     is Playlist.Unavailable -> {
                         Box(
@@ -252,7 +252,7 @@ private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
             playlistState = {
-                AsyncState.Data(
+                AsyncState.Loaded(
                     data = Playlist.Content(
                         id = "",
                         url = "",

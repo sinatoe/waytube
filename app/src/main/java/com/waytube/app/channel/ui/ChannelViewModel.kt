@@ -31,7 +31,7 @@ class ChannelViewModel(
         )
 
     val videoItems = channelState
-        .map { ((it as? AsyncState.Data)?.data as? Channel.Content)?.id }
+        .map { ((it as? AsyncState.Loaded)?.data as? Channel.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {

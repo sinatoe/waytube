@@ -31,7 +31,7 @@ class PlaylistViewModel(
         )
 
     val videoItems = playlistState
-        .map { ((it as? AsyncState.Data)?.data as? Playlist.Content)?.id }
+        .map { ((it as? AsyncState.Loaded)?.data as? Playlist.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {

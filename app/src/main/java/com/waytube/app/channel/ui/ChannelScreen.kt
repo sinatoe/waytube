@@ -112,7 +112,7 @@ private fun ChannelScreenContent(
                     Text(text = stringResource(R.string.label_channel))
                 },
                 actions = {
-                    ((channelState() as? AsyncState.Data)?.data as? Channel.Content)?.let { channel ->
+                    ((channelState() as? AsyncState.Loaded)?.data as? Channel.Content)?.let { channel ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -154,7 +154,7 @@ private fun ChannelScreenContent(
                 }
             }
 
-            is AsyncState.Data -> {
+            is AsyncState.Loaded -> {
                 when (val channel = state.data) {
                     is Channel.Unavailable -> {
                         Box(
@@ -257,7 +257,7 @@ private fun ChannelScreenContentPreview() {
     AppTheme {
         ChannelScreenContent(
             channelState = {
-                AsyncState.Data(
+                AsyncState.Loaded(
                     data = Channel.Content(
                         id = "",
                         url = "",

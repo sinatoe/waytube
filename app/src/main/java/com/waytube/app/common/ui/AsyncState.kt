@@ -12,15 +12,15 @@ import kotlinx.coroutines.flow.transformLatest
 sealed interface AsyncState<out T> {
     data object Loading : AsyncState<Nothing>
 
+    data class Loaded<T>(
+        val data: T,
+        val refreshState: RefreshState
+    ) : AsyncState<T>
+
     data class Error(
         val exception: Throwable,
         val retry: () -> Unit
     ) : AsyncState<Nothing>
-
-    data class Data<T>(
-        val data: T,
-        val refreshState: RefreshState
-    ) : AsyncState<T>
 
     companion object {
         fun <T> createFlow(fetch: suspend () -> Result<T>): Flow<AsyncState<T>> {
@@ -42,14 +42,14 @@ sealed interface AsyncState<out T> {
                 .runningFold(Loading as AsyncState<T>) { state, result ->
                     result?.fold(
                         onSuccess = { data ->
-                            Data(
+                            Loaded(
                                 data = data,
                                 refreshState = RefreshState.Idle(refresh = ::notifyTrigger)
                             )
                         },
                         onFailure = { exception ->
                             when (state) {
-                                is Data -> state.copy(
+                                is Loaded -> state.copy(
                                     refreshState = RefreshState.Error(
                                         exception = exception,
                                         retry = ::notifyTrigger
@@ -63,8 +63,8 @@ sealed interface AsyncState<out T> {
                             }
                         }
                     ) ?: when (state) {
-                        is Data -> state.copy(
-                            refreshState = RefreshState.Loading
+                        is Loaded -> state.copy(
+                            refreshState = RefreshState.Refreshing
                         )
 
                         else -> Loading

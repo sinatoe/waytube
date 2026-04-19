@@ -72,7 +72,7 @@ private fun VideoScreenContent(
                     }
                 }
 
-                is AsyncState.Data -> {
+                is AsyncState.Loaded -> {
                     when (val video = state.data) {
                         is Video.Unavailable -> {
                             Box(
