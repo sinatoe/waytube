@@ -47,7 +47,6 @@ import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.PaginatedData
-import com.waytube.app.common.ui.RefreshState
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.VideoItemCard
@@ -261,7 +260,7 @@ private fun ChannelScreenContentPreview() {
                         bannerUrl = "",
                         subscriberCount = 1_234_567
                     ),
-                    refreshState = RefreshState.Idle(refresh = {})
+                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
                 )
             },
             videoItems = {

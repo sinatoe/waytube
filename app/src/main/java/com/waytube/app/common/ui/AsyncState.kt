@@ -15,7 +15,18 @@ sealed interface AsyncState<out T> {
     data class Loaded<T>(
         val data: T,
         val refreshState: RefreshState
-    ) : AsyncState<T>
+    ) : AsyncState<T> {
+        sealed interface RefreshState {
+            data object Refreshing : RefreshState
+
+            data class Idle(val refresh: () -> Unit) : RefreshState
+
+            data class Error(
+                val exception: Throwable,
+                val retry: () -> Unit
+            ) : RefreshState
+        }
+    }
 
     data class Error(
         val exception: Throwable,
@@ -43,7 +54,7 @@ sealed interface AsyncState<out T> {
                     when (event) {
                         is FetchEvent.Loading -> when (state) {
                             is Loaded -> state.copy(
-                                refreshState = RefreshState.Refreshing
+                                refreshState = Loaded.RefreshState.Refreshing
                             )
 
                             else -> Loading
@@ -51,12 +62,12 @@ sealed interface AsyncState<out T> {
 
                         is FetchEvent.Success -> Loaded(
                             data = event.data,
-                            refreshState = RefreshState.Idle(refresh = ::notifyTrigger)
+                            refreshState = Loaded.RefreshState.Idle(refresh = ::notifyTrigger)
                         )
 
                         is FetchEvent.Failure -> when (state) {
                             is Loaded -> state.copy(
-                                refreshState = RefreshState.Error(
+                                refreshState = Loaded.RefreshState.Error(
                                     exception = event.exception,
                                     retry = ::notifyTrigger
                                 )
