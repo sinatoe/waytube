@@ -36,14 +36,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.PagedList
+import com.waytube.app.common.ui.RefreshState
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
-import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.VideoItemCard
 import com.waytube.app.common.ui.pagedItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
@@ -65,7 +66,6 @@ fun PlaylistScreen(
     PlaylistScreenContent(
         playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
         videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
-        onRetry = viewModel::retry,
         onLoadVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
@@ -76,9 +76,8 @@ fun PlaylistScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistScreenContent(
-    playlistState: () -> UiState<Playlist>,
+    playlistState: () -> AsyncState<Playlist>,
     videoItems: () -> PagedList<VideoItem>?,
-    onRetry: () -> Unit,
     onLoadVideoItems: () -> Unit,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
@@ -119,7 +118,7 @@ private fun PlaylistScreenContent(
                     Text(text = stringResource(R.string.label_playlist))
                 },
                 actions = {
-                    ((playlistState() as? UiState.Data)?.data as? Playlist.Content)?.let { playlist ->
+                    ((playlistState() as? AsyncState.Data)?.data as? Playlist.Content)?.let { playlist ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -136,7 +135,7 @@ private fun PlaylistScreenContent(
         }
     ) { contentPadding ->
         when (val state = playlistState()) {
-            is UiState.Loading -> {
+            is AsyncState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -147,7 +146,7 @@ private fun PlaylistScreenContent(
                 }
             }
 
-            is UiState.Error -> {
+            is AsyncState.Error -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -156,12 +155,12 @@ private fun PlaylistScreenContent(
                 ) {
                     StateMessage(
                         text = stringResource(R.string.message_playlist_load_error),
-                        onRetry = onRetry
+                        onRetry = state.retry
                     )
                 }
             }
 
-            is UiState.Data -> {
+            is AsyncState.Data -> {
                 when (val playlist = state.data) {
                     is Playlist.Unavailable -> {
                         Box(
@@ -253,15 +252,16 @@ private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
             playlistState = {
-                UiState.Data(
-                    Playlist.Content(
+                AsyncState.Data(
+                    data = Playlist.Content(
                         id = "",
                         url = "",
                         title = "Example playlist",
                         channelName = "Example channel",
                         thumbnailUrl = "",
                         videoCount = 123
-                    )
+                    ),
+                    refreshState = RefreshState.Idle(refresh = {})
                 )
             },
             videoItems = {
@@ -282,7 +282,6 @@ private fun PlaylistScreenContentPreview() {
                     state = PagedList.State.Done
                 )
             },
-            onRetry = {},
             onLoadVideoItems = {},
             onShare = {},
             onPlayVideo = {},

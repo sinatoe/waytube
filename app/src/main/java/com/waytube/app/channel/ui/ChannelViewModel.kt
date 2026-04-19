@@ -4,9 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.PagedListLoader
-import com.waytube.app.common.ui.UiState
-import com.waytube.app.common.ui.UiStateLoader
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -21,20 +20,18 @@ class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    private val channelLoader = UiStateLoader()
-
     val videoItemsLoader = PagedListLoader()
 
-    val channelState = channelLoader
-        .bind { repository.getChannel(id) }
+    val channelState = AsyncState
+        .createFlow { repository.getChannel(id) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = UiState.Loading
+            initialValue = AsyncState.Loading
         )
 
     val videoItems = channelState
-        .map { ((it as? UiState.Data)?.data as? Channel.Content)?.id }
+        .map { ((it as? AsyncState.Data)?.data as? Channel.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
@@ -46,10 +43,6 @@ class ChannelViewModel(
             started = SharingStarted.Lazily,
             initialValue = null
         )
-
-    fun retry() {
-        viewModelScope.launch { channelLoader.retry() }
-    }
 
     fun loadVideoItems() {
         viewModelScope.launch { videoItemsLoader.load() }

@@ -2,9 +2,8 @@ package com.waytube.app.playlist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.PagedListLoader
-import com.waytube.app.common.ui.UiState
-import com.waytube.app.common.ui.UiStateLoader
 import com.waytube.app.playlist.domain.Playlist
 import com.waytube.app.playlist.domain.PlaylistRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,20 +20,18 @@ class PlaylistViewModel(
     private val id: String,
     private val repository: PlaylistRepository
 ) : ViewModel() {
-    private val playlistLoader = UiStateLoader()
-
     private val videoItemsLoader = PagedListLoader()
 
-    val playlistState = playlistLoader
-        .bind { repository.getPlaylist(id) }
+    val playlistState = AsyncState
+        .createFlow { repository.getPlaylist(id) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = UiState.Loading
+            initialValue = AsyncState.Loading
         )
 
     val videoItems = playlistState
-        .map { ((it as? UiState.Data)?.data as? Playlist.Content)?.id }
+        .map { ((it as? AsyncState.Data)?.data as? Playlist.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
@@ -46,10 +43,6 @@ class PlaylistViewModel(
             started = SharingStarted.Lazily,
             initialValue = null
         )
-
-    fun retry() {
-        viewModelScope.launch { playlistLoader.retry() }
-    }
 
     fun loadVideoItems() {
         viewModelScope.launch { videoItemsLoader.load() }

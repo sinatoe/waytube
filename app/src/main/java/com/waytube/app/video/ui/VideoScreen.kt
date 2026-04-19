@@ -19,8 +19,8 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
 import com.waytube.app.common.ui.AppColorScheme
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.StateMessage
-import com.waytube.app.common.ui.UiState
 import com.waytube.app.video.domain.Video
 
 @Composable
@@ -29,16 +29,14 @@ fun VideoScreen(viewModel: VideoViewModel) {
         videoState = viewModel.videoState.collectAsStateWithLifecycle()::value,
         player = viewModel.player.collectAsStateWithLifecycle(initialValue = null)::value,
         isPlaying = viewModel.isPlaying.collectAsStateWithLifecycle()::value,
-        onRetry = viewModel::retry
     )
 }
 
 @Composable
 private fun VideoScreenContent(
-    videoState: () -> UiState<Video>?,
+    videoState: () -> AsyncState<Video>?,
     player: () -> Player?,
-    isPlaying: () -> Boolean,
-    onRetry: () -> Unit
+    isPlaying: () -> Boolean
 ) {
     MaterialTheme(colorScheme = AppColorScheme.Dark) {
         Scaffold(
@@ -49,7 +47,7 @@ private fun VideoScreenContent(
             when (val state = videoState()) {
                 null -> {}
 
-                is UiState.Loading -> {
+                is AsyncState.Loading -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -60,7 +58,7 @@ private fun VideoScreenContent(
                     }
                 }
 
-                is UiState.Error -> {
+                is AsyncState.Error -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -69,12 +67,12 @@ private fun VideoScreenContent(
                     ) {
                         StateMessage(
                             text = stringResource(R.string.message_video_load_error),
-                            onRetry = onRetry
+                            onRetry = state.retry
                         )
                     }
                 }
 
-                is UiState.Data -> {
+                is AsyncState.Data -> {
                     when (val video = state.data) {
                         is Video.Unavailable -> {
                             Box(
