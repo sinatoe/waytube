@@ -37,27 +37,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
-import com.waytube.app.common.ui.UiState
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagingItems
+import com.waytube.app.common.ui.paginatedItems
 import com.waytube.app.common.ui.rememberNavigationBackAction
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.common.ui.toCompactString
 import com.waytube.app.common.ui.toPluralCount
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
@@ -70,8 +67,7 @@ fun ChannelScreen(
 ) {
     ChannelScreenContent(
         channelState = viewModel.channelState.collectAsStateWithLifecycle()::value,
-        videoItems = viewModel.videoItems.collectAsLazyPagingItems(),
-        onRetry = viewModel::retry,
+        videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo
     )
@@ -80,9 +76,8 @@ fun ChannelScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChannelScreenContent(
-    channelState: () -> UiState<Channel>,
-    videoItems: LazyPagingItems<VideoItem>,
-    onRetry: () -> Unit,
+    channelState: () -> AsyncState<Channel>,
+    videoItems: () -> PaginatedData<VideoItem>?,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit
 ) {
@@ -114,7 +109,7 @@ private fun ChannelScreenContent(
                     Text(text = stringResource(R.string.label_channel))
                 },
                 actions = {
-                    ((channelState() as? UiState.Data)?.data as? Channel.Content)?.let { channel ->
+                    ((channelState() as? AsyncState.Loaded)?.data as? Channel.Content)?.let { channel ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -131,7 +126,7 @@ private fun ChannelScreenContent(
         }
     ) { contentPadding ->
         when (val state = channelState()) {
-            is UiState.Loading -> {
+            is AsyncState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -142,7 +137,7 @@ private fun ChannelScreenContent(
                 }
             }
 
-            is UiState.Error -> {
+            is AsyncState.Error -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -151,12 +146,12 @@ private fun ChannelScreenContent(
                 ) {
                     StateMessage(
                         text = stringResource(R.string.message_channel_load_error),
-                        onRetry = onRetry
+                        onRetry = state.retry
                     )
                 }
             }
 
-            is UiState.Data -> {
+            is AsyncState.Loaded -> {
                 when (val channel = state.data) {
                     is Channel.Unavailable -> {
                         Box(
@@ -180,12 +175,14 @@ private fun ChannelScreenContent(
                                 ChannelScreenCard(channel = channel)
                             }
 
-                            pagingItems(videoItems) { item ->
-                                VideoItemCard(
-                                    item = item,
-                                    onClick = { onPlayVideo(item.id) },
-                                    onLongClick = { selectedItem = item }
-                                )
+                            videoItems()?.let {
+                                paginatedItems(it) { item ->
+                                    VideoItemCard(
+                                        item = item,
+                                        onClick = { onPlayVideo(item.id) },
+                                        onLongClick = { selectedItem = item }
+                                    )
+                                }
                             }
                         }
                     }
@@ -251,40 +248,39 @@ private fun ChannelScreenCard(channel: Channel.Content) {
 @PreviewLightDark
 @Composable
 private fun ChannelScreenContentPreview() {
-    val videoItems = MutableStateFlow(
-        PagingData.from<VideoItem>(
-            (1..10).map { n ->
-                VideoItem.Regular(
-                    id = n.toString(),
-                    url = "",
-                    title = "Example video",
-                    channelId = "",
-                    channelName = "Example channel",
-                    thumbnailUrl = "",
-                    duration = 12.minutes + 34.seconds,
-                    viewCount = 1_234_567L,
-                    uploadedAt = Clock.System.now() - 14.days
-                )
-            }
-        )
-    ).collectAsLazyPagingItems()
-
     AppTheme {
         ChannelScreenContent(
             channelState = {
-                UiState.Data(
-                    Channel.Content(
+                AsyncState.Loaded(
+                    data = Channel.Content(
                         id = "",
                         url = "",
                         name = "Example channel",
                         avatarUrl = "",
                         bannerUrl = "",
                         subscriberCount = 1_234_567
-                    )
+                    ),
+                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
                 )
             },
-            videoItems = videoItems,
-            onRetry = {},
+            videoItems = {
+                PaginatedData(
+                    items = (1..10).map { n ->
+                        VideoItem.Regular(
+                            id = n.toString(),
+                            url = "",
+                            title = "Example video",
+                            channelId = "",
+                            channelName = "Example channel",
+                            thumbnailUrl = "",
+                            duration = 12.minutes + 34.seconds,
+                            viewCount = 1_234_567L,
+                            uploadedAt = Clock.System.now() - 14.days
+                        )
+                    },
+                    state = PaginatedData.State.Done
+                )
+            },
             onShare = {},
             onPlayVideo = {}
         )

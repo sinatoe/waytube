@@ -45,9 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
@@ -55,13 +52,13 @@ import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ChannelItemCard
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.common.ui.PlaylistItemCard
 import com.waytube.app.common.ui.VideoItemCard
-import com.waytube.app.common.ui.pagingItems
+import com.waytube.app.common.ui.paginatedItems
 import com.waytube.app.common.ui.shareText
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -75,9 +72,6 @@ fun SearchScreen(
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
 ) {
-    val isSearchSubmitted by viewModel.isSearchSubmitted.collectAsStateWithLifecycle()
-    val results = viewModel.results.collectAsLazyPagingItems()
-
     val textFieldState = rememberTextFieldState()
 
     LaunchedEffect(textFieldState.text) {
@@ -88,7 +82,7 @@ fun SearchScreen(
         textFieldState = textFieldState,
         suggestions = viewModel.suggestions.collectAsStateWithLifecycle()::value,
         selectedFilter = viewModel.selectedFilter.collectAsStateWithLifecycle()::value,
-        results = { if (isSearchSubmitted) results else null },
+        results = viewModel.results.collectAsStateWithLifecycle()::value,
         onTrySubmit = viewModel::trySubmit,
         onFilterClick = viewModel::toggleFilter,
         onShare = LocalContext.current::shareText,
@@ -104,7 +98,7 @@ private fun SearchScreenContent(
     textFieldState: TextFieldState,
     suggestions: () -> SearchSuggestions,
     selectedFilter: () -> SearchFilter?,
-    results: () -> LazyPagingItems<SearchResult>?,
+    results: () -> PaginatedData<SearchResult>?,
     onTrySubmit: (String) -> Boolean,
     onFilterClick: (SearchFilter) -> Unit,
     onShare: (String) -> Unit,
@@ -286,7 +280,7 @@ private fun SearchScreenContent(
                     }
                 }
 
-                pagingItems(results) { result ->
+                paginatedItems(results) { result ->
                     when (result) {
                         is SearchResult.Video -> {
                             VideoItemCard(
@@ -321,26 +315,6 @@ private fun SearchScreenContent(
 @PreviewLightDark
 @Composable
 private fun SearchScreenPreview() {
-    val results = MutableStateFlow(
-        PagingData.from<SearchResult>(
-            (1..10).map { n ->
-                SearchResult.Video(
-                    VideoItem.Regular(
-                        id = n.toString(),
-                        url = "",
-                        title = "Example video",
-                        channelId = "",
-                        channelName = "Example channel",
-                        thumbnailUrl = "",
-                        duration = 12.minutes + 34.seconds,
-                        viewCount = 1_234_567,
-                        uploadedAt = Clock.System.now() - 14.days
-                    )
-                )
-            }
-        )
-    ).collectAsLazyPagingItems()
-
     AppTheme {
         SearchScreenContent(
             textFieldState = rememberTextFieldState(initialText = "example query"),
@@ -351,7 +325,26 @@ private fun SearchScreenPreview() {
                 )
             },
             selectedFilter = { SearchFilter.VIDEOS },
-            results = { results },
+            results = {
+                PaginatedData(
+                    items = (1..10).map { n ->
+                        SearchResult.Video(
+                            VideoItem.Regular(
+                                id = n.toString(),
+                                url = "",
+                                title = "Example video",
+                                channelId = "",
+                                channelName = "Example channel",
+                                thumbnailUrl = "",
+                                duration = 12.minutes + 34.seconds,
+                                viewCount = 1_234_567,
+                                uploadedAt = Clock.System.now() - 14.days
+                            )
+                        )
+                    },
+                    state = PaginatedData.State.Done
+                )
+            },
             onTrySubmit = { true },
             onFilterClick = {},
             onShare = {},

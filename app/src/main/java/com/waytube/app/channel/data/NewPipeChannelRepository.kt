@@ -1,13 +1,12 @@
 package com.waytube.app.channel.data
 
-import androidx.paging.PagingData
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
-import com.waytube.app.common.data.NewPipePagingSource
+import com.waytube.app.common.data.paginate
 import com.waytube.app.common.data.toVideoItem
+import com.waytube.app.common.domain.Page
 import com.waytube.app.common.domain.VideoItem
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
@@ -32,13 +31,10 @@ class NewPipeChannelRepository : ChannelRepository {
             }
         }
 
-    override fun getVideoItems(id: String): Flow<PagingData<VideoItem>> =
-        NewPipePagingSource.createFlow(
-            extractorFactory = {
-                ServiceList.YouTube.getChannelTabExtractorFromId(id, ChannelTabs.VIDEOS)
-            },
-            transform = { item -> (item as? StreamInfoItem)?.toVideoItem() }
-        )
+    override suspend fun getVideoItems(id: String): Result<Page<VideoItem>> =
+        ServiceList.YouTube
+            .getChannelTabExtractorFromId(id, ChannelTabs.VIDEOS)
+            .paginate { (it as? StreamInfoItem)?.toVideoItem() }
 }
 
 private fun ChannelInfo.toChannel() = Channel.Content(

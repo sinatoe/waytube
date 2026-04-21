@@ -2,12 +2,10 @@ package com.waytube.app.channel.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
-import com.waytube.app.common.ui.UiState
-import com.waytube.app.common.ui.UiStateLoader
+import com.waytube.app.common.ui.AsyncState
+import com.waytube.app.common.ui.PaginatedData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -15,32 +13,31 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    private val channelLoader = UiStateLoader()
-
-    val channelState = channelLoader
-        .bind { repository.getChannel(id) }
+    val channelState = AsyncState
+        .createFlow { repository.getChannel(id) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = UiState.Loading
+            initialValue = AsyncState.Loading
         )
 
     val videoItems = channelState
-        .map { ((it as? UiState.Data)?.data as? Channel.Content)?.id }
+        .map { ((it as? AsyncState.Loaded)?.data as? Channel.Content)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
-            if (id != null) repository.getVideoItems(id) else flowOf(PagingData.empty())
+            if (id != null) {
+                PaginatedData.createFlow { repository.getVideoItems(id) }
+            } else flowOf(null)
         }
-        .cachedIn(viewModelScope)
-
-    fun retry() {
-        viewModelScope.launch { channelLoader.retry() }
-    }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 }

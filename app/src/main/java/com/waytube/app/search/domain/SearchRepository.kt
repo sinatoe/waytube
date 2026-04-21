@@ -1,10 +1,9 @@
 package com.waytube.app.search.domain
 
-import androidx.paging.PagingData
-import kotlinx.coroutines.flow.Flow
+import com.waytube.app.common.domain.Page
 
 interface SearchRepository {
     suspend fun getSuggestions(query: String): Result<List<String>>
 
-    fun getResults(query: String, filter: SearchFilter?): Flow<PagingData<SearchResult>>
+    suspend fun getResults(query: String, filter: SearchFilter?): Result<Page<SearchResult>>
 }

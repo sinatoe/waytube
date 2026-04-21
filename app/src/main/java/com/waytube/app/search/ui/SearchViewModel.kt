@@ -4,7 +4,7 @@ import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.cachedIn
+import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 @Parcelize
 private data class SearchState(
@@ -75,14 +73,6 @@ class SearchViewModel(
             )
         )
 
-    val isSearchSubmitted = searchState
-        .map { it != null }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5.seconds),
-            initialValue = false
-        )
-
     val selectedFilter = searchState
         .map { it?.filter }
         .stateIn(
@@ -93,8 +83,14 @@ class SearchViewModel(
 
     val results = searchState
         .filterNotNull()
-        .flatMapLatest { (query, filter) -> repository.getResults(query, filter) }
-        .cachedIn(viewModelScope)
+        .flatMapLatest { (query, filter) ->
+            PaginatedData.createFlow { repository.getResults(query, filter) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = null
+        )
 
     init {
         searchState

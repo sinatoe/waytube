@@ -15,8 +15,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.google.common.util.concurrent.ListenableFuture
-import com.waytube.app.common.ui.UiState
-import com.waytube.app.common.ui.UiStateLoader
+import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,7 +44,6 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.guava.await
-import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -79,15 +77,11 @@ class VideoViewModel(
             initialValue = false
         )
 
-    private val videoLoader = UiStateLoader()
-
-    private val skipSegmentsLoader = UiStateLoader()
-
     val videoState = sessionState
         .map { it?.videoId }
         .distinctUntilChanged()
         .flatMapLatest { id ->
-            if (id != null) videoLoader.bind { repository.getVideo(id) } else flowOf(null)
+            if (id != null) AsyncState.createFlow { repository.getVideo(id) } else flowOf(null)
         }
         .stateIn(
             scope = viewModelScope,
@@ -121,11 +115,11 @@ class VideoViewModel(
         )
 
     val skipSegments = videoState
-        .map { ((it as? UiState.Data)?.data as? Video.Content.Regular)?.id }
+        .map { ((it as? AsyncState.Loaded)?.data as? Video.Content.Regular)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
-                skipSegmentsLoader.bind { repository.getSkipSegments(id) }
+                AsyncState.createFlow { repository.getSkipSegments(id) }
             } else flowOf(null)
         }
         .stateIn(
@@ -137,7 +131,7 @@ class VideoViewModel(
     init {
         combine(
             videoState
-                .map { ((it as? UiState.Data)?.data as? Video.Content) }
+                .map { ((it as? AsyncState.Loaded)?.data as? Video.Content) }
                 .distinctUntilChanged(),
             player,
             sessionState.filterNotNull().distinctUntilChangedBy { it.videoId }.map { it.position }
@@ -210,7 +204,7 @@ class VideoViewModel(
 
         combine(
             videoState
-                .map { (it as? UiState.Data)?.data is Video.Content.Regular }
+                .map { (it as? AsyncState.Loaded)?.data is Video.Content.Regular }
                 .distinctUntilChanged(),
             player
         ) { isRegularVideo, player -> isRegularVideo to player }
@@ -241,7 +235,7 @@ class VideoViewModel(
         combine(
             player,
             sessionState,
-            skipSegments.map { (it as? UiState.Data)?.data }
+            skipSegments.map { (it as? AsyncState.Loaded)?.data }
         ) { player, state, skipSegments -> Triple(player, state, skipSegments) }
             .onEach { (player, state, skipSegments) ->
                 if (state?.position != null) {
@@ -264,10 +258,6 @@ class VideoViewModel(
         sessionState.update { state ->
             if (state?.videoId != id) VideoSessionState(id) else state
         }
-    }
-
-    fun retry() {
-        viewModelScope.launch { videoLoader.retry() }
     }
 
     fun stop() {
