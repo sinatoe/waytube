@@ -32,36 +32,36 @@ class PaginatedDataTest {
             awaitItem().let { data ->
                 assertTrue(data.items.isEmpty())
                 assertTrue(
-                    (data.state as? PaginatedData.State.Idle)
+                    (data.state as? PaginatedData.State.HasMore.Idle)
                         ?.also { it.load() } != null
                 )
             }
 
-            assertTrue(awaitItem().state is PaginatedData.State.Loading)
+            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
 
             assertTrue(
                 (awaitItem().state as? PaginatedData.State.Error)
                     ?.also { it.retry() } != null
             )
 
-            assertTrue(awaitItem().state is PaginatedData.State.Loading)
+            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
 
             awaitItem().let { data ->
                 assertTrue(data.items.size == 1)
                 assertTrue(
-                    (data.state as? PaginatedData.State.Idle)
+                    (data.state as? PaginatedData.State.HasMore.Idle)
                         ?.also { it.load() } != null
                 )
             }
 
-            assertTrue(awaitItem().state is PaginatedData.State.Loading)
+            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
 
             assertTrue(
                 (awaitItem().state as? PaginatedData.State.Error)
                     ?.also { it.retry() } != null
             )
 
-            assertTrue(awaitItem().state is PaginatedData.State.Loading)
+            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
 
             awaitItem().let { data ->
                 assertTrue(data.items.size == 2)

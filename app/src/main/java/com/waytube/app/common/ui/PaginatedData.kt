@@ -14,11 +14,11 @@ data class PaginatedData<T>(
     val state: State
 ) {
     sealed interface State {
-        sealed interface HasMore : State
+        sealed interface HasMore : State {
+            data object Loading : HasMore
 
-        data object Loading : HasMore
-
-        data class Idle(val load: () -> Unit) : HasMore
+            data class Idle(val load: () -> Unit) : HasMore
+        }
 
         data class Error(
             val exception: Throwable,
@@ -44,19 +44,19 @@ data class PaginatedData<T>(
                     initial = PaginatedData(
                         items = page.items,
                         state = page.next?.let {
-                            State.Idle(load = { trigger.tryEmit(it) })
+                            State.HasMore.Idle(load = { trigger.tryEmit(it) })
                         } ?: State.Done
                     )
                 ) { data, (event, fetch) ->
                     when (event) {
                         is FetchEvent.Loading -> data.copy(
-                            state = State.Loading
+                            state = State.HasMore.Loading
                         )
 
                         is FetchEvent.Success -> data.copy(
                             items = data.items + event.data.items,
                             state = event.data.next?.let {
-                                State.Idle(load = { trigger.tryEmit(it) })
+                                State.HasMore.Idle(load = { trigger.tryEmit(it) })
                             } ?: State.Done
                         )
 
