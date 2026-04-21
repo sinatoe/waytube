@@ -4,7 +4,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.transformLatest
@@ -36,19 +35,21 @@ sealed interface AsyncState<out T> {
 
     companion object {
         fun <T> createFlow(fetch: suspend () -> Result<T>): Flow<AsyncState<T>> {
-            val trigger = MutableSharedFlow<Unit>(
+            val trigger = MutableSharedFlow<Boolean>(
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST
             )
 
             fun notifyTrigger() {
-                trigger.tryEmit(Unit)
+                trigger.tryEmit(true)
             }
 
             return trigger
-                .onStart { emit(Unit) }
-                .transformLatest {
-                    emit(FetchEvent.Loading)
+                .onStart { emit(false) }
+                .transformLatest { isManualTrigger ->
+                    if (isManualTrigger) {
+                        emit(FetchEvent.Loading)
+                    }
                     emit(FetchEvent.fromResult(fetch()))
                 }
                 .runningFold(Loading as AsyncState<T>) { state, event ->
@@ -81,7 +82,6 @@ sealed interface AsyncState<out T> {
                         }
                     }
                 }
-                .distinctUntilChanged()
         }
     }
 }
