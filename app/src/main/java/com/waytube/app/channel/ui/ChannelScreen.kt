@@ -20,9 +20,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +47,7 @@ import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.PaginatedData
+import com.waytube.app.common.ui.PullToRefreshLayout
 import com.waytube.app.common.ui.StateMessage
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.VideoItemCard
@@ -155,30 +153,9 @@ private fun ChannelScreenContent(
             is AsyncState.Loaded -> {
                 val (channel, videoItems) = state.data
 
-                val pullToRefreshState = rememberPullToRefreshState()
-                val isRefreshing = state.refreshState is AsyncState.Loaded.RefreshState.Refreshing
-
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = {
-                        when (val state = state.refreshState) {
-                            is AsyncState.Loaded.RefreshState.Refreshing -> {}
-
-                            is AsyncState.Loaded.RefreshState.Idle -> state.refresh()
-
-                            is AsyncState.Loaded.RefreshState.Error -> state.retry()
-                        }
-                    },
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            state = pullToRefreshState,
-                            isRefreshing = isRefreshing,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(contentPadding)
-                        )
-                    }
+                PullToRefreshLayout(
+                    refreshState = state.refreshState,
+                    contentPadding = contentPadding
                 ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
