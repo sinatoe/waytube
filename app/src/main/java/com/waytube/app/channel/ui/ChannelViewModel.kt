@@ -2,13 +2,11 @@ package com.waytube.app.channel.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
 import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.PaginatedData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -19,25 +17,34 @@ class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    val channelState = AsyncState
-        .createFlow { repository.getChannel(id) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = AsyncState.Loading
-        )
+    val bundleState = AsyncState
+        .createFlow {
+            runCatching {
+                val channel = repository.getChannel(id).getOrThrow()
+                val page = repository.getVideoItems(channel.id).getOrThrow()
 
-    val videoItems = channelState
-        .map { ((it as? AsyncState.Loaded)?.data as? Channel.Content)?.id }
-        .distinctUntilChanged()
-        .flatMapLatest { id ->
-            if (id != null) {
-                PaginatedData.createFlow { repository.getVideoItems(id) }
-            } else flowOf(null)
+                channel to page
+            }
+        }
+        .flatMapLatest { state ->
+            when (state) {
+                is AsyncState.Loading, is AsyncState.Error -> flowOf(state)
+
+                is AsyncState.Loaded -> {
+                    val (channel, page) = state.data
+
+                    PaginatedData.createFlow(page).map { videoItems ->
+                        AsyncState.Loaded(
+                            data = ChannelBundle(channel, videoItems),
+                            refreshState = state.refreshState
+                        )
+                    }
+                }
+            }
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = null
+            initialValue = AsyncState.Loading
         )
 }

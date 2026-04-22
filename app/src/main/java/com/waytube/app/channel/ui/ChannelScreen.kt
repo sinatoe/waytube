@@ -20,6 +20,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +69,7 @@ fun ChannelScreen(
     onPlayVideo: (String) -> Unit
 ) {
     ChannelScreenContent(
-        channelState = viewModel.channelState.collectAsStateWithLifecycle()::value,
-        videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
+        bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo
     )
@@ -76,8 +78,7 @@ fun ChannelScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChannelScreenContent(
-    channelState: () -> AsyncState<Channel>,
-    videoItems: () -> PaginatedData<VideoItem>?,
+    bundleState: () -> AsyncState<ChannelBundle>,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit
 ) {
@@ -109,7 +110,7 @@ private fun ChannelScreenContent(
                     Text(text = stringResource(R.string.label_channel))
                 },
                 actions = {
-                    ((channelState() as? AsyncState.Loaded)?.data as? Channel.Content)?.let { channel ->
+                    (bundleState() as? AsyncState.Loaded)?.data?.channel?.let { channel ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -125,7 +126,7 @@ private fun ChannelScreenContent(
             )
         }
     ) { contentPadding ->
-        when (val state = channelState()) {
+        when (val state = bundleState()) {
             is AsyncState.Loading -> {
                 Box(
                     modifier = Modifier
@@ -152,38 +153,47 @@ private fun ChannelScreenContent(
             }
 
             is AsyncState.Loaded -> {
-                when (val channel = state.data) {
-                    is Channel.Unavailable -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(contentPadding),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            StateMessage(
-                                text = stringResource(R.string.message_channel_unavailable)
-                            )
+                val (channel, videoItems) = state.data
+
+                val pullToRefreshState = rememberPullToRefreshState()
+                val isRefreshing = state.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    state = pullToRefreshState,
+                    onRefresh = {
+                        when (val state = state.refreshState) {
+                            is AsyncState.Loaded.RefreshState.Refreshing -> {}
+
+                            is AsyncState.Loaded.RefreshState.Idle -> state.refresh()
+
+                            is AsyncState.Loaded.RefreshState.Error -> state.retry()
                         }
+                    },
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = isRefreshing,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(contentPadding)
+                        )
                     }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = contentPadding
+                    ) {
+                        item {
+                            ChannelScreenCard(channel = channel)
+                        }
 
-                    is Channel.Content -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = contentPadding
-                        ) {
-                            item {
-                                ChannelScreenCard(channel = channel)
-                            }
-
-                            videoItems()?.let {
-                                paginatedItems(it) { item ->
-                                    VideoItemCard(
-                                        item = item,
-                                        onClick = { onPlayVideo(item.id) },
-                                        onLongClick = { selectedItem = item }
-                                    )
-                                }
-                            }
+                        paginatedItems(videoItems) { item ->
+                            VideoItemCard(
+                                item = item,
+                                onClick = { onPlayVideo(item.id) },
+                                onLongClick = { selectedItem = item }
+                            )
                         }
                     }
                 }
@@ -193,7 +203,7 @@ private fun ChannelScreenContent(
 }
 
 @Composable
-private fun ChannelScreenCard(channel: Channel.Content) {
+private fun ChannelScreenCard(channel: Channel) {
     Card(modifier = Modifier.padding(8.dp)) {
         channel.bannerUrl?.let { bannerUrl ->
             StyledImage(
@@ -250,35 +260,35 @@ private fun ChannelScreenCard(channel: Channel.Content) {
 private fun ChannelScreenContentPreview() {
     AppTheme {
         ChannelScreenContent(
-            channelState = {
+            bundleState = {
                 AsyncState.Loaded(
-                    data = Channel.Content(
-                        id = "",
-                        url = "",
-                        name = "Example channel",
-                        avatarUrl = "",
-                        bannerUrl = "",
-                        subscriberCount = 1_234_567
+                    data = ChannelBundle(
+                        channel = Channel(
+                            id = "",
+                            url = "",
+                            name = "Example channel",
+                            avatarUrl = "",
+                            bannerUrl = "",
+                            subscriberCount = 1_234_567
+                        ),
+                        videoItems = PaginatedData(
+                            items = (1..10).map { n ->
+                                VideoItem.Regular(
+                                    id = n.toString(),
+                                    url = "",
+                                    title = "Example video",
+                                    channelId = "",
+                                    channelName = "Example channel",
+                                    thumbnailUrl = "",
+                                    duration = 12.minutes + 34.seconds,
+                                    viewCount = 1_234_567L,
+                                    uploadedAt = Clock.System.now() - 14.days
+                                )
+                            },
+                            state = PaginatedData.State.Done
+                        )
                     ),
                     refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
-                )
-            },
-            videoItems = {
-                PaginatedData(
-                    items = (1..10).map { n ->
-                        VideoItem.Regular(
-                            id = n.toString(),
-                            url = "",
-                            title = "Example video",
-                            channelId = "",
-                            channelName = "Example channel",
-                            thumbnailUrl = "",
-                            duration = 12.minutes + 34.seconds,
-                            viewCount = 1_234_567L,
-                            uploadedAt = Clock.System.now() - 14.days
-                        )
-                    },
-                    state = PaginatedData.State.Done
                 )
             },
             onShare = {},

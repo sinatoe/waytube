@@ -16,6 +16,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,8 +66,7 @@ fun PlaylistScreen(
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
-        playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
-        videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
+        bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
         onNavigateToChannel = onNavigateToChannel
@@ -74,8 +76,7 @@ fun PlaylistScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistScreenContent(
-    playlistState: () -> AsyncState<Playlist>,
-    videoItems: () -> PaginatedData<VideoItem>?,
+    bundleState: () -> AsyncState<PlaylistBundle>,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
@@ -115,7 +116,7 @@ private fun PlaylistScreenContent(
                     Text(text = stringResource(R.string.label_playlist))
                 },
                 actions = {
-                    ((playlistState() as? AsyncState.Loaded)?.data as? Playlist.Content)?.let { playlist ->
+                    (bundleState() as? AsyncState.Loaded)?.data?.playlist?.let { playlist ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -131,7 +132,7 @@ private fun PlaylistScreenContent(
             )
         }
     ) { contentPadding ->
-        when (val state = playlistState()) {
+        when (val state = bundleState()) {
             is AsyncState.Loading -> {
                 Box(
                     modifier = Modifier
@@ -158,38 +159,47 @@ private fun PlaylistScreenContent(
             }
 
             is AsyncState.Loaded -> {
-                when (val playlist = state.data) {
-                    is Playlist.Unavailable -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(contentPadding),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            StateMessage(
-                                text = stringResource(R.string.message_playlist_unavailable)
-                            )
+                val (playlist, videoItems) = state.data
+
+                val pullToRefreshState = rememberPullToRefreshState()
+                val isRefreshing = state.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    state = pullToRefreshState,
+                    onRefresh = {
+                        when (val state = state.refreshState) {
+                            is AsyncState.Loaded.RefreshState.Refreshing -> {}
+
+                            is AsyncState.Loaded.RefreshState.Idle -> state.refresh()
+
+                            is AsyncState.Loaded.RefreshState.Error -> state.retry()
                         }
+                    },
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = isRefreshing,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(contentPadding)
+                        )
                     }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = contentPadding
+                    ) {
+                        item {
+                            PlaylistScreenCard(playlist = playlist)
+                        }
 
-                    is Playlist.Content -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = contentPadding
-                        ) {
-                            item {
-                                PlaylistScreenCard(playlist = playlist)
-                            }
-
-                            videoItems()?.let {
-                                paginatedItems(it) { item ->
-                                    VideoItemCard(
-                                        item = item,
-                                        onClick = { onPlayVideo(item.id) },
-                                        onLongClick = { selectedItem = item }
-                                    )
-                                }
-                            }
+                        paginatedItems(videoItems) { item ->
+                            VideoItemCard(
+                                item = item,
+                                onClick = { onPlayVideo(item.id) },
+                                onLongClick = { selectedItem = item }
+                            )
                         }
                     }
                 }
@@ -199,7 +209,7 @@ private fun PlaylistScreenContent(
 }
 
 @Composable
-private fun PlaylistScreenCard(playlist: Playlist.Content) {
+private fun PlaylistScreenCard(playlist: Playlist) {
     Card(modifier = Modifier.padding(8.dp)) {
         StyledImage(
             data = playlist.thumbnailUrl,
@@ -245,35 +255,35 @@ private fun PlaylistScreenCard(playlist: Playlist.Content) {
 private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
-            playlistState = {
+            bundleState = {
                 AsyncState.Loaded(
-                    data = Playlist.Content(
-                        id = "",
-                        url = "",
-                        title = "Example playlist",
-                        channelName = "Example channel",
-                        thumbnailUrl = "",
-                        videoCount = 123
-                    ),
-                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
-                )
-            },
-            videoItems = {
-                PaginatedData(
-                    items = (1..10).map { n ->
-                        VideoItem.Regular(
-                            id = n.toString(),
+                    data = PlaylistBundle(
+                        playlist = Playlist(
+                            id = "",
                             url = "",
-                            title = "Example video",
-                            channelId = "",
+                            title = "Example playlist",
                             channelName = "Example channel",
                             thumbnailUrl = "",
-                            duration = 12.minutes + 34.seconds,
-                            viewCount = 1_234_567L,
-                            uploadedAt = Clock.System.now() - 14.days
+                            videoCount = 123
+                        ),
+                        videoItems = PaginatedData(
+                            items = (1..10).map { n ->
+                                VideoItem.Regular(
+                                    id = n.toString(),
+                                    url = "",
+                                    title = "Example video",
+                                    channelId = "",
+                                    channelName = "Example channel",
+                                    thumbnailUrl = "",
+                                    duration = 12.minutes + 34.seconds,
+                                    viewCount = 1_234_567L,
+                                    uploadedAt = Clock.System.now() - 14.days
+                                )
+                            },
+                            state = PaginatedData.State.Done
                         )
-                    },
-                    state = PaginatedData.State.Done
+                    ),
+                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
                 )
             },
             onShare = {},
