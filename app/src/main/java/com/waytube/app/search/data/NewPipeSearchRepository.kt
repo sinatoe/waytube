@@ -19,8 +19,8 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeSearchRepository : SearchRepository {
     override suspend fun getSuggestions(query: String): Result<List<String>> =
-        runCatching {
-            withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            runCatching {
                 ServiceList.YouTube.suggestionExtractor.suggestionList(query)
             }
         }

@@ -24,30 +24,30 @@ class NewPipeVideoRepository(
     private val json: Json
 ) : VideoRepository {
     override suspend fun getVideo(id: String): Result<Video> =
-        runCatching {
-            try {
-                val info = withContext(Dispatchers.IO) {
-                    StreamInfo.getInfo(
+        withContext(Dispatchers.IO) {
+            runCatching {
+                try {
+                    val info = StreamInfo.getInfo(
                         ServiceList.YouTube,
                         ServiceList.YouTube.streamLHFactory.getUrl(id)
                     )
-                }
 
-                info.toVideo()
-            } catch (e: ContentNotAvailableException) {
-                Video.Unavailable(
-                    reason = when (e) {
-                        is AgeRestrictedContentException -> Video.Unavailable.Reason.AGE_RESTRICTED
-                        else -> null
-                    }
-                )
+                    info.toVideo()
+                } catch (e: ContentNotAvailableException) {
+                    Video.Unavailable(
+                        reason = when (e) {
+                            is AgeRestrictedContentException -> Video.Unavailable.Reason.AGE_RESTRICTED
+                            else -> null
+                        }
+                    )
+                }
             }
         }
 
 
     override suspend fun getSkipSegments(id: String): Result<List<SkipSegment>> =
-        runCatching {
-            withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            runCatching {
                 val url = HttpUrl.Builder()
                     .scheme("https")
                     .host("sponsor.ajay.app")

@@ -13,15 +13,15 @@ import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 
 class NewPipePlaylistRepository : PlaylistRepository {
     override suspend fun getPlaylist(id: String): Result<Playlist> =
-        runCatching {
-            val info = withContext(Dispatchers.IO) {
-                PlaylistInfo.getInfo(
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val info = PlaylistInfo.getInfo(
                     ServiceList.YouTube,
                     ServiceList.YouTube.playlistLHFactory.getUrl(id)
                 )
-            }
 
-            info.toPlaylist()
+                info.toPlaylist()
+            }
         }
 
     override suspend fun getVideoItems(id: String): Result<Page<VideoItem>> =

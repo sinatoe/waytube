@@ -15,15 +15,15 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeChannelRepository : ChannelRepository {
     override suspend fun getChannel(id: String): Result<Channel> =
-        runCatching {
-            val info = withContext(Dispatchers.IO) {
-                ChannelInfo.getInfo(
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val info = ChannelInfo.getInfo(
                     ServiceList.YouTube,
                     ServiceList.YouTube.channelLHFactory.getUrl(id)
                 )
-            }
 
-            info.toChannel()
+                info.toChannel()
+            }
         }
 
     override suspend fun getVideoItems(id: String): Result<Page<VideoItem>> =

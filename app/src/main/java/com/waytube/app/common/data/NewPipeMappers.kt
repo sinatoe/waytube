@@ -27,25 +27,27 @@ suspend fun <T : InfoItem, R : Identifiable> ListExtractor<T>.paginate(
     val deduplicationSet = ConcurrentHashMap.newKeySet<String>()
 
     suspend fun load(source: suspend () -> ListExtractor.InfoItemsPage<T>): Result<Page<R>> =
-        runCatching {
-            try {
-                val extractorPage = withContext(Dispatchers.IO) { source() }
+        withContext(Dispatchers.IO) {
+            runCatching {
+                try {
+                    val extractorPage = source()
 
-                Page(
-                    items = extractorPage.items
-                        .mapNotNull(transform)
-                        .filter { deduplicationSet.add(it.id) },
-                    next = extractorPage.nextPage?.let {
-                        { load { getPage(it) } }
-                    }
-                )
-            } catch (e: Throwable) {
-                if (treatErrorAsEmpty(e)) {
                     Page(
-                        items = emptyList(),
-                        next = null
+                        items = extractorPage.items
+                            .mapNotNull(transform)
+                            .filter { deduplicationSet.add(it.id) },
+                        next = extractorPage.nextPage?.let {
+                            { load { getPage(it) } }
+                        }
                     )
-                } else throw e
+                } catch (e: Throwable) {
+                    if (treatErrorAsEmpty(e)) {
+                        Page(
+                            items = emptyList(),
+                            next = null
+                        )
+                    } else throw e
+                }
             }
         }
 
