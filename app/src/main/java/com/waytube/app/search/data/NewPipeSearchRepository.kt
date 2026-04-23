@@ -1,15 +1,15 @@
 package com.waytube.app.search.data
 
+import com.waytube.app.common.data.fetch
 import com.waytube.app.common.data.paginate
 import com.waytube.app.common.data.toChannelItem
 import com.waytube.app.common.data.toPlaylistItem
 import com.waytube.app.common.data.toVideoItem
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
 import com.waytube.app.search.domain.SearchResult
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
@@ -18,17 +18,15 @@ import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQu
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class NewPipeSearchRepository : SearchRepository {
-    override suspend fun getSuggestions(query: String): Result<List<String>> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                ServiceList.YouTube.suggestionExtractor.suggestionList(query)
-            }
+    override suspend fun getSuggestions(query: String): FetchResult<List<String>> =
+        fetch {
+            ServiceList.YouTube.suggestionExtractor.suggestionList(query)
         }
 
     override suspend fun getResults(
         query: String,
         filter: SearchFilter?
-    ): Result<Page<SearchResult>> =
+    ): FetchResult<Page<SearchResult>> =
         ServiceList.YouTube
             .getSearchExtractor(
                 query,

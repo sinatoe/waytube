@@ -1,7 +1,9 @@
 package com.waytube.app.video.domain
 
-interface VideoRepository {
-    suspend fun getVideo(id: String): Result<Video>
+import com.waytube.app.common.domain.FetchResult
 
-    suspend fun getSkipSegments(id: String): Result<List<SkipSegment>>
+interface VideoRepository {
+    suspend fun getVideo(id: String): FetchResult<Video>
+
+    suspend fun getSkipSegments(id: String): FetchResult<List<SkipSegment>>
 }

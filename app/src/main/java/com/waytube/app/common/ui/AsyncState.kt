@@ -1,5 +1,7 @@
 package com.waytube.app.common.ui
 
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -22,19 +24,19 @@ sealed interface AsyncState<out T> {
             data class Idle(val refresh: () -> Unit) : RefreshState
 
             data class Error(
-                val exception: Throwable,
+                val error: FetchError,
                 val retry: () -> Unit
             ) : RefreshState
         }
     }
 
     data class Error(
-        val exception: Throwable,
+        val error: FetchError,
         val retry: () -> Unit
     ) : AsyncState<Nothing>
 
     companion object {
-        fun <T> createFlow(fetch: suspend () -> Result<T>): Flow<AsyncState<T>> {
+        fun <T> createFlow(fetch: suspend () -> FetchResult<T>): Flow<AsyncState<T>> {
             val trigger = MutableSharedFlow<Boolean>(
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -70,13 +72,13 @@ sealed interface AsyncState<out T> {
                         is FetchEvent.Failure -> when (state) {
                             is Loaded -> state.copy(
                                 refreshState = Loaded.RefreshState.Error(
-                                    exception = event.exception,
+                                    error = event.error,
                                     retry = ::notifyTrigger
                                 )
                             )
 
                             else -> Error(
-                                exception = event.exception,
+                                error = event.error,
                                 retry = ::notifyTrigger
                             )
                         }

@@ -1,5 +1,7 @@
 package com.waytube.app.common.ui
 
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -21,7 +23,7 @@ data class PaginatedData<T>(
         }
 
         data class Error(
-            val exception: Throwable,
+            val error: FetchError,
             val retry: () -> Unit
         ) : State
 
@@ -30,7 +32,7 @@ data class PaginatedData<T>(
 
     companion object {
         fun <T> createFlow(page: Page<T>): Flow<PaginatedData<T>> {
-            val trigger = MutableSharedFlow<suspend () -> Result<Page<T>>>(
+            val trigger = MutableSharedFlow<suspend () -> FetchResult<Page<T>>>(
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST
             )
@@ -62,7 +64,7 @@ data class PaginatedData<T>(
 
                         is FetchEvent.Failure -> data.copy(
                             state = State.Error(
-                                exception = event.exception,
+                                error = event.error,
                                 retry = { trigger.tryEmit(fetch) }
                             )
                         )
@@ -70,7 +72,7 @@ data class PaginatedData<T>(
                 }
         }
 
-        fun <T> createFlow(fetch: suspend () -> Result<Page<T>>): Flow<PaginatedData<T>> =
+        fun <T> createFlow(fetch: suspend () -> FetchResult<Page<T>>): Flow<PaginatedData<T>> =
             createFlow(
                 Page(items = emptyList(), next = fetch)
             )

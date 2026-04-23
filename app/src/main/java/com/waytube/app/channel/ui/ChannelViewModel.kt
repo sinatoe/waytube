@@ -3,6 +3,8 @@ package com.waytube.app.channel.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.waytube.app.channel.domain.ChannelRepository
+import com.waytube.app.common.domain.flatMap
+import com.waytube.app.common.domain.map
 import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.PaginatedData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,11 +21,8 @@ class ChannelViewModel(
 ) : ViewModel() {
     val bundleState = AsyncState
         .createFlow {
-            runCatching {
-                val channel = repository.getChannel(id).getOrThrow()
-                val page = repository.getVideoItems(channel.id).getOrThrow()
-
-                channel to page
+            repository.getChannel(id).flatMap { channel ->
+                repository.getVideoItems(channel.id).map { page -> channel to page }
             }
         }
         .flatMapLatest { state ->

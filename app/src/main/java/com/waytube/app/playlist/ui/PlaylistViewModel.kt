@@ -2,6 +2,8 @@ package com.waytube.app.playlist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waytube.app.common.domain.flatMap
+import com.waytube.app.common.domain.map
 import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.playlist.domain.PlaylistRepository
@@ -19,11 +21,8 @@ class PlaylistViewModel(
 ) : ViewModel() {
     val bundleState = AsyncState
         .createFlow {
-            runCatching {
-                val playlist = repository.getPlaylist(id).getOrThrow()
-                val page = repository.getVideoItems(playlist.id).getOrThrow()
-
-                playlist to page
+            repository.getPlaylist(id).flatMap { playlist ->
+                repository.getVideoItems(playlist.id).map { page -> playlist to page }
             }
         }
         .flatMapLatest { state ->

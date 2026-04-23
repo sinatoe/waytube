@@ -73,47 +73,20 @@ private fun VideoScreenContent(
                 }
 
                 is AsyncState.Loaded -> {
-                    when (val video = state.data) {
-                        is Video.Unavailable -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(contentPadding),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                StateMessage(
-                                    text = stringResource(
-                                        when (video.reason) {
-                                            Video.Unavailable.Reason.AGE_RESTRICTED ->
-                                                R.string.message_video_age_restricted
-
-                                            Video.Unavailable.Reason.UNSUPPORTED ->
-                                                R.string.message_video_unsupported
-
-                                            null -> R.string.message_video_unavailable
-                                        }
-                                    )
-                                )
+                    player()?.let { player ->
+                        AndroidView(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding)
+                                .then(
+                                    if (isPlaying()) Modifier.keepScreenOn() else Modifier
+                                ),
+                            factory = { context ->
+                                PlayerView(context).apply {
+                                    this.player = player
+                                }
                             }
-                        }
-
-                        is Video.Content -> {
-                            player()?.let { player ->
-                                AndroidView(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(contentPadding)
-                                        .then(
-                                            if (isPlaying()) Modifier.keepScreenOn() else Modifier
-                                        ),
-                                    factory = { context ->
-                                        PlayerView(context).apply {
-                                            this.player = player
-                                        }
-                                    }
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }

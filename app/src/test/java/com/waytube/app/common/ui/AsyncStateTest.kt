@@ -1,6 +1,8 @@
 package com.waytube.app.common.ui
 
 import app.cash.turbine.test
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -11,8 +13,8 @@ class AsyncStateTest {
     fun `test sequential fetch responses`() = runTest {
         val resultIterator = iterator {
             repeat(2) {
-                yield(Result.failure(Exception()))
-                yield(Result.success(Unit))
+                yield(FetchResult.Failure(FetchError.UNKNOWN))
+                yield(FetchResult.Success(Unit))
             }
         }
 
