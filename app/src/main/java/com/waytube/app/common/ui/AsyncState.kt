@@ -16,19 +16,9 @@ sealed interface AsyncState<out T> {
 
     data class Loaded<T>(
         val data: T,
-        val refreshState: RefreshState
-    ) : AsyncState<T> {
-        sealed interface RefreshState {
-            data object Refreshing : RefreshState
-
-            data class Idle(val refresh: () -> Unit) : RefreshState
-
-            data class Error(
-                val error: FetchError,
-                val retry: () -> Unit
-            ) : RefreshState
-        }
-    }
+        val isRefreshing: Boolean,
+        val refresh: () -> Unit
+    ) : AsyncState<T>
 
     data class Error(
         val error: FetchError,
@@ -58,7 +48,8 @@ sealed interface AsyncState<out T> {
                     when (event) {
                         is FetchEvent.Loading -> when (state) {
                             is Loaded -> state.copy(
-                                refreshState = Loaded.RefreshState.Refreshing
+                                isRefreshing = true,
+                                refresh = {}
                             )
 
                             else -> Loading
@@ -66,16 +57,17 @@ sealed interface AsyncState<out T> {
 
                         is FetchEvent.Success -> Loaded(
                             data = event.data,
-                            refreshState = Loaded.RefreshState.Idle(refresh = ::notifyTrigger)
+                            isRefreshing = false,
+                            refresh = ::notifyTrigger
                         )
 
                         is FetchEvent.Failure -> when (state) {
-                            is Loaded -> state.copy(
-                                refreshState = Loaded.RefreshState.Error(
-                                    error = event.error,
-                                    retry = ::notifyTrigger
+                            is Loaded -> {
+                                state.copy(
+                                    isRefreshing = false,
+                                    refresh = ::notifyTrigger
                                 )
-                            )
+                            }
 
                             else -> Error(
                                 error = event.error,

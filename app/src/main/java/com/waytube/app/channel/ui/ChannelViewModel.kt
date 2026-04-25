@@ -35,7 +35,8 @@ class ChannelViewModel(
                     PaginatedData.createFlow(page).map { videoItems ->
                         AsyncState.Loaded(
                             data = ChannelBundle(channel, videoItems),
-                            refreshState = state.refreshState
+                            isRefreshing = state.isRefreshing,
+                            refresh = state.refresh
                         )
                     }
                 }

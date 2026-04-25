@@ -35,7 +35,8 @@ class PlaylistViewModel(
                     PaginatedData.createFlow(page).map { videoItems ->
                         AsyncState.Loaded(
                             data = PlaylistBundle(playlist, videoItems),
-                            refreshState = state.refreshState
+                            isRefreshing = state.isRefreshing,
+                            refresh = state.refresh
                         )
                     }
                 }

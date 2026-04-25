@@ -11,25 +11,19 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun PullToRefreshLayout(
-    refreshState: AsyncState.Loaded.RefreshState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
-    val isRefreshing = refreshState is AsyncState.Loaded.RefreshState.Refreshing
 
     PullToRefreshBox(
         modifier = modifier,
         isRefreshing = isRefreshing,
         state = pullToRefreshState,
-        onRefresh = {
-            when (refreshState) {
-                is AsyncState.Loaded.RefreshState.Idle -> refreshState.refresh()
-                is AsyncState.Loaded.RefreshState.Error -> refreshState.retry()
-                else -> {}
-            }
-        },
+        onRefresh = onRefresh,
         indicator = {
             PullToRefreshDefaults.Indicator(
                 state = pullToRefreshState,

@@ -130,9 +130,10 @@ private fun PlaylistScreenContent(
         AsyncContent(
             state = bundleState(),
             contentPadding = contentPadding
-        ) { (data, refreshState) ->
+        ) { (data, isRefreshing, refresh) ->
             PullToRefreshLayout(
-                refreshState = refreshState,
+                isRefreshing = isRefreshing,
+                onRefresh = refresh,
                 contentPadding = contentPadding
             ) {
                 LazyColumn(
@@ -231,7 +232,8 @@ private fun PlaylistScreenContentPreview() {
                             state = PaginatedData.State.Done
                         )
                     ),
-                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
+                    isRefreshing = false,
+                    refresh = {}
                 )
             },
             onShare = {},
