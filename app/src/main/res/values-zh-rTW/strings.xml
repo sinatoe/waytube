@@ -16,12 +16,12 @@
     <string name="label_search">搜尋</string>
     <string name="label_share">分享</string>
     <string name="label_videos">影片</string>
-    <string name="message_channel_load_error">載入頻道時發生錯誤</string>
-    <string name="message_channel_unavailable">此頻道無法使用</string>
+    <string name="message_content_load_error">載入內容時發生錯誤</string> <!-- ai -->
+    <string name="message_content_unavailable">此內容無法使用</string> <!-- ai -->
+    <string name="message_content_age_restricted">此內容有年齡限制</string> <!-- ai -->
+    <string name="message_content_network_error">網路連線錯誤</string> <!-- ai -->
     <string name="message_paging_empty">沒有可顯示的項目</string>
     <string name="message_paging_load_error">載入項目時發生錯誤</string>
-    <string name="message_playlist_load_error">載入播放清單時發生錯誤</string>
-    <string name="message_playlist_unavailable">此播放清單無法使用</string>
     <string name="message_video_load_error">載入影片時發生錯誤</string>
     <string name="message_video_age_restricted">此影片有年齡限制</string>
     <string name="message_video_ip_address_blocked">來自您 IP 位址的影片存取已被封鎖</string> <!-- ai -->
