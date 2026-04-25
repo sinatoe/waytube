@@ -2,6 +2,7 @@ package com.waytube.app.common.ui
 
 import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.domain.FetchResult
+import com.waytube.app.common.domain.fold
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -26,27 +27,46 @@ sealed interface AsyncState<out T> {
     ) : AsyncState<Nothing>
 
     companion object {
+        private enum class Trigger {
+            MANUAL,
+            AUTOMATIC
+        }
+
+        private sealed interface FetchEvent<out T> {
+            data object Loading : FetchEvent<Nothing>
+
+            data class Success<T>(val data: T) : FetchEvent<T>
+
+            data class Failure(val error: FetchError) : FetchEvent<Nothing>
+        }
+
         fun <T> createFlow(fetch: suspend () -> FetchResult<T>): Flow<AsyncState<T>> {
-            val trigger = MutableSharedFlow<Boolean>(
+            val trigger = MutableSharedFlow<Trigger>(
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST
             )
 
             fun notifyTrigger() {
-                trigger.tryEmit(true)
+                trigger.tryEmit(Trigger.MANUAL)
             }
 
             return trigger
-                .onStart { emit(false) }
-                .transformLatest { isManualTrigger ->
-                    if (isManualTrigger) {
+                .onStart { emit(Trigger.AUTOMATIC) }
+                .transformLatest { trigger ->
+                    if (trigger == Trigger.MANUAL) {
                         emit(FetchEvent.Loading)
                     }
-                    emit(FetchEvent.fromResult(fetch()))
+
+                    emit(
+                        fetch().fold(
+                            onSuccess = { FetchEvent.Success(it) },
+                            onFailure = { FetchEvent.Failure(it) }
+                        )
+                    )
                 }
                 .runningFold(Loading as AsyncState<T>) { state, event ->
                     when (event) {
-                        is FetchEvent.Loading -> when (state) {
+                        FetchEvent.Loading -> when (state) {
                             is Loaded -> state.copy(
                                 isRefreshing = true,
                                 refresh = {}
