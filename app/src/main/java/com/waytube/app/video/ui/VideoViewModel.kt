@@ -115,7 +115,7 @@ class VideoViewModel(
         )
 
     val skipSegments = videoState
-        .map { ((it as? AsyncState.Loaded)?.data as? Video.Content.Regular)?.id }
+        .map { ((it as? AsyncState.Loaded)?.data as? Video.Regular)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
@@ -131,7 +131,7 @@ class VideoViewModel(
     init {
         combine(
             videoState
-                .map { ((it as? AsyncState.Loaded)?.data as? Video.Content) }
+                .map { (it as? AsyncState.Loaded)?.data }
                 .distinctUntilChanged(),
             player,
             sessionState.filterNotNull().distinctUntilChangedBy { it.videoId }.map { it.position }
@@ -139,10 +139,10 @@ class VideoViewModel(
             .onEach { (video, player, position) ->
                 if (video != null) {
                     val (uri, mimeType) = when (video) {
-                        is Video.Content.Regular ->
+                        is Video.Regular ->
                             video.dashManifestUrl to MimeTypes.APPLICATION_MPD
 
-                        is Video.Content.Live ->
+                        is Video.Live ->
                             video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
                     }
 
@@ -204,7 +204,7 @@ class VideoViewModel(
 
         combine(
             videoState
-                .map { (it as? AsyncState.Loaded)?.data is Video.Content.Regular }
+                .map { (it as? AsyncState.Loaded)?.data is Video.Regular }
                 .distinctUntilChanged(),
             player
         ) { isRegularVideo, player -> isRegularVideo to player }

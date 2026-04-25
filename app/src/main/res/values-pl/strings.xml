@@ -16,12 +16,12 @@
     <string name="label_search">Wyszukaj</string>
     <string name="label_share">Udostępnij</string>
     <string name="label_videos">Filmy</string>
-    <string name="message_channel_load_error">Wystąpił błąd podczas wczytywania kanału</string>
-    <string name="message_channel_unavailable">Ten kanał jest niedostępny</string>
+    <string name="message_content_load_error">Wystąpił błąd podczas wczytywania zawartości</string>
+    <string name="message_content_unavailable">Ta zawartość jest niedostępna</string>
+    <string name="message_content_age_restricted">Ta zawartość ma ograniczenia wiekowe</string>
+    <string name="message_content_network_error">Błąd połączenia sieciowego</string>
     <string name="message_paging_empty">Brak elementów do wyświetlenia</string>
     <string name="message_paging_load_error">Wystąpił błąd podczas wczytywania elementów</string>
-    <string name="message_playlist_load_error">Wystąpił błąd podczas wczytywania playlisty</string>
-    <string name="message_playlist_unavailable">Ta playlista jest niedostępna</string>
     <string name="message_video_load_error">Wystąpił błąd podczas wczytywania filmu</string>
     <string name="message_video_age_restricted">Ten film ma ograniczenia wiekowe</string>
     <string name="message_video_ip_address_blocked">Dostęp do filmów z twojego adresu IP został zablokowany</string>

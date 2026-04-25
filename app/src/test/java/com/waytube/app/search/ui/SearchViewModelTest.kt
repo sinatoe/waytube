@@ -2,6 +2,7 @@ package com.waytube.app.search.ui
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchRepository
 import io.mockk.coEvery
@@ -41,7 +42,7 @@ class SearchViewModelTest {
         val preferencesRepository = mockk<PreferencesRepository>()
 
         every { preferencesRepository.searchHistory } returns flowOf(emptyList())
-        coEvery { repository.getSuggestions(any()) } returns Result.success(emptyList())
+        coEvery { repository.getSuggestions(any()) } returns FetchResult.Success(emptyList())
 
         val viewModel = SearchViewModel(
             savedStateHandle = SavedStateHandle(),

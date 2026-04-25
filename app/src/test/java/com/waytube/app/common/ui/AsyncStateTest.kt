@@ -1,6 +1,8 @@
 package com.waytube.app.common.ui
 
 import app.cash.turbine.test
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -11,8 +13,8 @@ class AsyncStateTest {
     fun `test sequential fetch responses`() = runTest {
         val resultIterator = iterator {
             repeat(2) {
-                yield(Result.failure(Exception()))
-                yield(Result.success(Unit))
+                yield(FetchResult.Failure(FetchError.UNKNOWN))
+                yield(FetchResult.Success(Unit))
             }
         }
 
@@ -28,30 +30,23 @@ class AsyncStateTest {
             assertEquals(AsyncState.Loading, awaitItem())
 
             assertTrue(
-                ((awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState as? AsyncState.Loaded.RefreshState.Idle)
-                    ?.also { it.refresh() } != null
+                (awaitItem() as? AsyncState.Loaded)?.also { it.refresh() }?.isRefreshing == false
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == true
             )
 
             assertTrue(
-                ((awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState as? AsyncState.Loaded.RefreshState.Error)
-                    ?.also { it.retry() } != null
+                (awaitItem() as? AsyncState.Loaded)?.also { it.refresh() }?.isRefreshing == false
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == true
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Idle
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == false
             )
 
             expectNoEvents()

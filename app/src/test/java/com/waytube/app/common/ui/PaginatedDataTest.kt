@@ -1,6 +1,8 @@
 package com.waytube.app.common.ui
 
 import app.cash.turbine.test
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
@@ -10,14 +12,14 @@ class PaginatedDataTest {
     @Test
     fun `test sequential paginated fetch responses`() = runTest {
         val nextResultIterator = iterator {
-            yield(Result.failure(Exception()))
-            yield(Result.success(Page(items = listOf(Unit), next = null)))
+            yield(FetchResult.Failure(FetchError.UNKNOWN))
+            yield(FetchResult.Success(Page(items = listOf(Unit), next = null)))
         }
 
         val resultIterator = iterator {
-            yield(Result.failure(Exception()))
+            yield(FetchResult.Failure(FetchError.UNKNOWN))
             yield(
-                Result.success(
+                FetchResult.Success(
                     Page(
                         items = listOf(Unit),
                         next = nextResultIterator::next

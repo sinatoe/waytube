@@ -1,6 +1,8 @@
 package com.waytube.app.common.data
 
 import com.waytube.app.common.domain.ChannelItem
+import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Identifiable
 import com.waytube.app.common.domain.Page
 import com.waytube.app.common.domain.PlaylistItem
@@ -11,25 +13,44 @@ import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
+import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.stream.ContentAvailability
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinInstant
 
+suspend fun <T> fetch(block: () -> T): FetchResult<T> =
+    withContext(Dispatchers.IO) {
+        try {
+            FetchResult.Success(block())
+        } catch (e: Throwable) {
+            FetchResult.Failure(
+                when (e) {
+                    is AgeRestrictedContentException -> FetchError.AGE_RESTRICTED
+                    is ContentNotAvailableException -> FetchError.CONTENT_UNAVAILABLE
+                    is IOException -> FetchError.NETWORK
+                    else -> FetchError.UNKNOWN
+                }
+            )
+        }
+    }
+
 suspend fun <T : InfoItem, R : Identifiable> ListExtractor<T>.paginate(
     treatErrorAsEmpty: (Throwable) -> Boolean = { false },
     transform: (T) -> R?
-): Result<Page<R>> {
+): FetchResult<Page<R>> {
     val deduplicationSet = ConcurrentHashMap.newKeySet<String>()
 
-    suspend fun load(source: suspend () -> ListExtractor.InfoItemsPage<T>): Result<Page<R>> =
-        runCatching {
+    suspend fun load(block: () -> ListExtractor.InfoItemsPage<T>): FetchResult<Page<R>> =
+        fetch {
             try {
-                val extractorPage = withContext(Dispatchers.IO) { source() }
+                val extractorPage = block()
 
                 Page(
                     items = extractorPage.items

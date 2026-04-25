@@ -1,6 +1,5 @@
 package com.waytube.app.playlist.ui
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -21,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -36,13 +33,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.AppTheme
+import com.waytube.app.common.ui.AsyncContent
 import com.waytube.app.common.ui.AsyncState
 import com.waytube.app.common.ui.BackButton
 import com.waytube.app.common.ui.ItemMenuSheet
 import com.waytube.app.common.ui.MenuAction
 import com.waytube.app.common.ui.MoreOptionsMenu
 import com.waytube.app.common.ui.PaginatedData
-import com.waytube.app.common.ui.StateMessage
+import com.waytube.app.common.ui.PullToRefreshLayout
 import com.waytube.app.common.ui.StyledImage
 import com.waytube.app.common.ui.VideoItemCard
 import com.waytube.app.common.ui.paginatedItems
@@ -63,8 +61,7 @@ fun PlaylistScreen(
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
-        playlistState = viewModel.playlistState.collectAsStateWithLifecycle()::value,
-        videoItems = viewModel.videoItems.collectAsStateWithLifecycle()::value,
+        bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
         onPlayVideo = onPlayVideo,
         onNavigateToChannel = onNavigateToChannel
@@ -74,8 +71,7 @@ fun PlaylistScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistScreenContent(
-    playlistState: () -> AsyncState<Playlist>,
-    videoItems: () -> PaginatedData<VideoItem>?,
+    bundleState: () -> AsyncState<PlaylistBundle>,
     onShare: (String) -> Unit,
     onPlayVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
@@ -115,7 +111,7 @@ private fun PlaylistScreenContent(
                     Text(text = stringResource(R.string.label_playlist))
                 },
                 actions = {
-                    ((playlistState() as? AsyncState.Loaded)?.data as? Playlist.Content)?.let { playlist ->
+                    (bundleState() as? AsyncState.Loaded)?.data?.playlist?.let { playlist ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -131,66 +127,29 @@ private fun PlaylistScreenContent(
             )
         }
     ) { contentPadding ->
-        when (val state = playlistState()) {
-            is AsyncState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding),
-                    contentAlignment = Alignment.Center
+        AsyncContent(
+            state = bundleState(),
+            contentPadding = contentPadding
+        ) { (data, isRefreshing, refresh) ->
+            PullToRefreshLayout(
+                isRefreshing = isRefreshing,
+                onRefresh = refresh,
+                contentPadding = contentPadding
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding
                 ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            is AsyncState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    StateMessage(
-                        text = stringResource(R.string.message_playlist_load_error),
-                        onRetry = state.retry
-                    )
-                }
-            }
-
-            is AsyncState.Loaded -> {
-                when (val playlist = state.data) {
-                    is Playlist.Unavailable -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(contentPadding),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            StateMessage(
-                                text = stringResource(R.string.message_playlist_unavailable)
-                            )
-                        }
+                    item {
+                        PlaylistScreenCard(playlist = data.playlist)
                     }
 
-                    is Playlist.Content -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = contentPadding
-                        ) {
-                            item {
-                                PlaylistScreenCard(playlist = playlist)
-                            }
-
-                            videoItems()?.let {
-                                paginatedItems(it) { item ->
-                                    VideoItemCard(
-                                        item = item,
-                                        onClick = { onPlayVideo(item.id) },
-                                        onLongClick = { selectedItem = item }
-                                    )
-                                }
-                            }
-                        }
+                    paginatedItems(data.videoItems) { item ->
+                        VideoItemCard(
+                            item = item,
+                            onClick = { onPlayVideo(item.id) },
+                            onLongClick = { selectedItem = item }
+                        )
                     }
                 }
             }
@@ -199,7 +158,7 @@ private fun PlaylistScreenContent(
 }
 
 @Composable
-private fun PlaylistScreenCard(playlist: Playlist.Content) {
+private fun PlaylistScreenCard(playlist: Playlist) {
     Card(modifier = Modifier.padding(8.dp)) {
         StyledImage(
             data = playlist.thumbnailUrl,
@@ -245,35 +204,36 @@ private fun PlaylistScreenCard(playlist: Playlist.Content) {
 private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
-            playlistState = {
+            bundleState = {
                 AsyncState.Loaded(
-                    data = Playlist.Content(
-                        id = "",
-                        url = "",
-                        title = "Example playlist",
-                        channelName = "Example channel",
-                        thumbnailUrl = "",
-                        videoCount = 123
-                    ),
-                    refreshState = AsyncState.Loaded.RefreshState.Idle(refresh = {})
-                )
-            },
-            videoItems = {
-                PaginatedData(
-                    items = (1..10).map { n ->
-                        VideoItem.Regular(
-                            id = n.toString(),
+                    data = PlaylistBundle(
+                        playlist = Playlist(
+                            id = "",
                             url = "",
-                            title = "Example video",
-                            channelId = "",
+                            title = "Example playlist",
                             channelName = "Example channel",
                             thumbnailUrl = "",
-                            duration = 12.minutes + 34.seconds,
-                            viewCount = 1_234_567L,
-                            uploadedAt = Clock.System.now() - 14.days
+                            videoCount = 123
+                        ),
+                        videoItems = PaginatedData(
+                            items = (1..10).map { n ->
+                                VideoItem.Regular(
+                                    id = n.toString(),
+                                    url = "",
+                                    title = "Example video",
+                                    channelId = "",
+                                    channelName = "Example channel",
+                                    thumbnailUrl = "",
+                                    duration = 12.minutes + 34.seconds,
+                                    viewCount = 1_234_567L,
+                                    uploadedAt = Clock.System.now() - 14.days
+                                )
+                            },
+                            state = PaginatedData.State.Done
                         )
-                    },
-                    state = PaginatedData.State.Done
+                    ),
+                    isRefreshing = false,
+                    refresh = {}
                 )
             },
             onShare = {},

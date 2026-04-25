@@ -1,64 +1,55 @@
 package com.waytube.app.video.data
 
+import com.waytube.app.common.data.fetch
+import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.video.domain.SkipSegment
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.expectSuccess
-import io.ktor.client.request.get
-import io.ktor.http.HttpStatusCode
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
-import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
+import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
 
-private const val SPONSOR_BLOCK_API_ENDPOINT = "https://sponsor.ajay.app/api/skipSegments"
-
-class NewPipeVideoRepository(private val httpClient: HttpClient) : VideoRepository {
-    override suspend fun getVideo(id: String): Result<Video> =
-        runCatching {
-            try {
-                val info = withContext(Dispatchers.IO) {
-                    StreamInfo.getInfo(
-                        ServiceList.YouTube,
-                        ServiceList.YouTube.streamLHFactory.getUrl(id)
-                    )
-                }
-
-                info.toVideo()
-            } catch (e: ContentNotAvailableException) {
-                Video.Unavailable(
-                    reason = when (e) {
-                        is AgeRestrictedContentException -> Video.Unavailable.Reason.AGE_RESTRICTED
-                        else -> null
-                    }
+class NewPipeVideoRepository(
+    private val okHttpClient: OkHttpClient,
+    private val json: Json
+) : VideoRepository {
+    override suspend fun getVideo(id: String): FetchResult<Video> =
+        fetch {
+            StreamInfo
+                .getInfo(
+                    ServiceList.YouTube,
+                    ServiceList.YouTube.streamLHFactory.getUrl(id)
                 )
-            }
+                .toVideo()
         }
 
+    override suspend fun getSkipSegments(id: String): FetchResult<List<SkipSegment>> =
+        fetch {
+            val url = HttpUrl.Builder()
+                .scheme("https")
+                .host("sponsor.ajay.app")
+                .addPathSegments("api/skipSegments")
+                .addQueryParameter("videoID", id)
+                .build()
 
-    override suspend fun getSkipSegments(id: String): Result<List<SkipSegment>> =
-        runCatching {
-            try {
-                httpClient
-                    .get(SPONSOR_BLOCK_API_ENDPOINT) {
-                        expectSuccess = true
-                        url {
-                            parameters["videoID"] = id
-                        }
-                    }
-                    .body<List<SponsorBlockSkipSegment>>()
-                    .map { it.toSkipSegment() }
-            } catch (e: ClientRequestException) {
-                if (e.response.status == HttpStatusCode.NotFound) emptyList() else throw e
+            okHttpClient.newCall(Request(url)).execute().use { response ->
+                when {
+                    response.code == 404 -> emptyList()
+
+                    response.isSuccessful -> json
+                        .decodeFromString<List<SponsorBlockSkipSegment>>(response.body.string())
+                        .map { it.toSkipSegment() }
+
+                    else -> throw IOException()
+                }
             }
         }
 }
@@ -67,7 +58,7 @@ private fun StreamInfo.toVideo(): Video {
     val thumbnailUrl = thumbnails.maxBy { it.height }.url
 
     return when (streamType) {
-        StreamType.VIDEO_STREAM -> Video.Content.Regular(
+        StreamType.VIDEO_STREAM -> Video.Regular(
             id = id,
             title = name,
             channelName = uploaderName,
@@ -75,7 +66,7 @@ private fun StreamInfo.toVideo(): Video {
             dashManifestUrl = generateDashManifestUrl()
         )
 
-        StreamType.LIVE_STREAM -> Video.Content.Live(
+        StreamType.LIVE_STREAM -> Video.Live(
             id = id,
             title = name,
             channelName = uploaderName,
@@ -83,7 +74,7 @@ private fun StreamInfo.toVideo(): Video {
             hlsPlaylistUrl = hlsUrl
         )
 
-        else -> Video.Unavailable(reason = Video.Unavailable.Reason.UNSUPPORTED)
+        else -> error("Unknown stream type")
     }
 }
 

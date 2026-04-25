@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.waytube.app.common.domain.fold
 import com.waytube.app.common.ui.PaginatedData
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
@@ -51,8 +52,11 @@ class SearchViewModel(
             if (query.isNotEmpty()) flow {
                 emit(
                     SearchSuggestions(
-                        items = query.takeIf { it.isNotBlank() }?.let {
-                            repository.getSuggestions(it).getOrNull()
+                        items = query.takeIf { it.isNotBlank() }?.let { query ->
+                            repository.getSuggestions(query).fold(
+                                onSuccess = { it },
+                                onFailure = { null }
+                            )
                         } ?: emptyList(),
                         type = SearchSuggestions.Type.REMOTE
                     )
