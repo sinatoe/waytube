@@ -30,30 +30,23 @@ class AsyncStateTest {
             assertEquals(AsyncState.Loading, awaitItem())
 
             assertTrue(
-                ((awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState as? AsyncState.Loaded.RefreshState.Idle)
-                    ?.also { it.refresh() } != null
+                (awaitItem() as? AsyncState.Loaded)?.also { it.refresh() }?.isRefreshing == false
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == true
             )
 
             assertTrue(
-                ((awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState as? AsyncState.Loaded.RefreshState.Error)
-                    ?.also { it.retry() } != null
+                (awaitItem() as? AsyncState.Loaded)?.also { it.refresh() }?.isRefreshing == false
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Refreshing
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == true
             )
 
             assertTrue(
-                (awaitItem() as? AsyncState.Loaded)
-                    ?.refreshState is AsyncState.Loaded.RefreshState.Idle
+                (awaitItem() as? AsyncState.Loaded)?.isRefreshing == false
             )
 
             expectNoEvents()
