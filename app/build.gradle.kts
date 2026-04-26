@@ -64,8 +64,7 @@ android {
     }
 
     androidResources {
-        generateLocaleConfig = true
-        localeFilters += setOf("en-rUS", "pl", "zh-rTW")
+        localeFilters += "en"
     }
 }
 

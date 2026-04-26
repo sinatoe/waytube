@@ -6,5 +6,5 @@ import java.util.Locale
 fun Long.toPluralCount(): Int = if (this >= 1000) 0 else toInt()
 
 fun Long.toCompactString(): String = CompactDecimalFormat
-    .getInstance(Locale.getDefault(), CompactDecimalFormat.CompactStyle.SHORT)
+    .getInstance(Locale.ENGLISH, CompactDecimalFormat.CompactStyle.SHORT)
     .format(this)

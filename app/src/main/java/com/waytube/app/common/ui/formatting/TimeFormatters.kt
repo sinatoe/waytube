@@ -4,6 +4,7 @@ import android.icu.text.RelativeDateTimeFormatter
 import android.text.format.DateUtils
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.periodUntil
+import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -32,6 +33,7 @@ fun Instant.toRelativeTimeString(now: Instant = Clock.System.now()): String {
             quantity > 0 || unit == RelativeDateTimeFormatter.RelativeUnit.SECONDS
         }
 
-    return RelativeDateTimeFormatter.getInstance()
+    return RelativeDateTimeFormatter
+        .getInstance(Locale.ENGLISH)
         .format(quantity.toDouble(), direction, unit)
 }
