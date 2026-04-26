@@ -9,15 +9,13 @@ android {
     namespace = "com.waytube.app"
 
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
         applicationId = "com.waytube.app"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 5
         versionName = "0.2.0"
 
