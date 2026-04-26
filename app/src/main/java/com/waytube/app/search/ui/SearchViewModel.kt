@@ -5,7 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.waytube.app.common.domain.fold
-import com.waytube.app.common.ui.PaginatedData
+import com.waytube.app.common.ui.pagination.paginatedDataFlow
 import com.waytube.app.preferences.domain.PreferencesRepository
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
@@ -88,7 +88,7 @@ class SearchViewModel(
     val results = searchState
         .filterNotNull()
         .flatMapLatest { (query, filter) ->
-            PaginatedData.createFlow { repository.getResults(query, filter) }
+            paginatedDataFlow { repository.getResults(query, filter) }
         }
         .stateIn(
             scope = viewModelScope,

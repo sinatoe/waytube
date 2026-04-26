@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.element
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton

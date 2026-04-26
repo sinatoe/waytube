@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.waytube.app.channel.domain.ChannelRepository
 import com.waytube.app.common.domain.flatMap
 import com.waytube.app.common.domain.map
-import com.waytube.app.common.ui.AsyncState
-import com.waytube.app.common.ui.PaginatedData
+import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.async.asyncStateFlow
+import com.waytube.app.common.ui.pagination.paginatedDataFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flatMapLatest
@@ -19,12 +20,11 @@ class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    val bundleState = AsyncState
-        .createFlow {
-            repository.getChannel(id).flatMap { channel ->
-                repository.getVideoItems(channel.id).map { page -> channel to page }
-            }
+    val bundleState = asyncStateFlow {
+        repository.getChannel(id).flatMap { channel ->
+            repository.getVideoItems(channel.id).map { page -> channel to page }
         }
+    }
         .flatMapLatest { state ->
             when (state) {
                 is AsyncState.Loading, is AsyncState.Error -> flowOf(state)
@@ -32,7 +32,7 @@ class ChannelViewModel(
                 is AsyncState.Loaded -> {
                     val (channel, page) = state.data
 
-                    PaginatedData.createFlow(page).map { videoItems ->
+                    paginatedDataFlow(page).map { videoItems ->
                         AsyncState.Loaded(
                             data = ChannelBundle(channel, videoItems),
                             isRefreshing = state.isRefreshing,

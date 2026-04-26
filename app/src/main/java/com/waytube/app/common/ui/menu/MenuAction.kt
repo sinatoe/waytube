@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.menu
 
 import androidx.compose.ui.graphics.painter.Painter
 

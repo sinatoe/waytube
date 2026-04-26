@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.pagination
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.Identifiable
+import com.waytube.app.common.ui.element.StateMessage
 
 fun <T : Identifiable> LazyListScope.paginatedItems(
     data: PaginatedData<T>,

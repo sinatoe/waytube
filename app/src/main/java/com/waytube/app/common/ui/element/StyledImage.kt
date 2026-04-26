@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.element
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

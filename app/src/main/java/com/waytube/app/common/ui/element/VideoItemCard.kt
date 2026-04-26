@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.element
 
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +13,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
+import com.waytube.app.common.ui.formatting.toCompactString
+import com.waytube.app.common.ui.formatting.toFormattedString
+import com.waytube.app.common.ui.formatting.toPluralCount
+import com.waytube.app.common.ui.formatting.toRelativeTimeString
+import com.waytube.app.common.ui.theming.AppTheme
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes

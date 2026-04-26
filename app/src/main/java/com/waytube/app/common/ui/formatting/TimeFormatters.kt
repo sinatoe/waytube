@@ -1,22 +1,14 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.formatting
 
-import android.icu.text.CompactDecimalFormat
 import android.icu.text.RelativeDateTimeFormatter
 import android.text.format.DateUtils
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.periodUntil
-import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 
 fun Duration.toFormattedString(): String = DateUtils.formatElapsedTime(inWholeSeconds)
-
-fun Long.toPluralCount(): Int = if (this >= 1000) 0 else toInt()
-
-fun Long.toCompactString(): String = CompactDecimalFormat
-    .getInstance(Locale.getDefault(), CompactDecimalFormat.CompactStyle.SHORT)
-    .format(this)
 
 fun Instant.toRelativeTimeString(now: Instant = Clock.System.now()): String {
     val (direction, start, end) = if (this > now) {
@@ -35,7 +27,11 @@ fun Instant.toRelativeTimeString(now: Instant = Clock.System.now()): String {
         yield(period.hours to RelativeDateTimeFormatter.RelativeUnit.HOURS)
         yield(period.minutes to RelativeDateTimeFormatter.RelativeUnit.MINUTES)
         yield(period.seconds to RelativeDateTimeFormatter.RelativeUnit.SECONDS)
-    }.first { it.first > 0 || it.second == RelativeDateTimeFormatter.RelativeUnit.SECONDS }
+    }
+        .first { (quantity, unit) ->
+            quantity > 0 || unit == RelativeDateTimeFormatter.RelativeUnit.SECONDS
+        }
 
-    return RelativeDateTimeFormatter.getInstance().format(quantity.toDouble(), direction, unit)
+    return RelativeDateTimeFormatter.getInstance()
+        .format(quantity.toDouble(), direction, unit)
 }

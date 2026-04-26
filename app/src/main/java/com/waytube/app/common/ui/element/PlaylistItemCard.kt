@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.element
 
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +13,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.waytube.app.R
 import com.waytube.app.common.domain.PlaylistItem
+import com.waytube.app.common.ui.formatting.toCompactString
+import com.waytube.app.common.ui.formatting.toPluralCount
+import com.waytube.app.common.ui.theming.AppTheme
 
 @Composable
 fun PlaylistItemCard(

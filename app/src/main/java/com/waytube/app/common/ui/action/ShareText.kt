@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.action
 
 import android.content.Context
 import android.content.Intent

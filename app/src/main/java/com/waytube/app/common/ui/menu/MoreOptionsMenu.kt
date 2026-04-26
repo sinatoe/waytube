@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.menu
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu

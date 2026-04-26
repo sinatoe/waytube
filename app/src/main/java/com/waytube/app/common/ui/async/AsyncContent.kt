@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.async
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.FetchError
+import com.waytube.app.common.ui.element.StateMessage
 
 @Composable
 fun <T> AsyncContent(

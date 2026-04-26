@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.element
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +14,9 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.ChannelItem
+import com.waytube.app.common.ui.formatting.toCompactString
+import com.waytube.app.common.ui.formatting.toPluralCount
+import com.waytube.app.common.ui.theming.AppTheme
 
 @Composable
 fun ChannelItemCard(

@@ -13,9 +13,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
-import com.waytube.app.common.ui.AppColorScheme
-import com.waytube.app.common.ui.AsyncContent
-import com.waytube.app.common.ui.AsyncState
+import com.waytube.app.common.ui.theming.AppColorScheme
+import com.waytube.app.common.ui.async.AsyncContent
+import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.video.domain.Video
 
 @Composable

@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.theming
 
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.dynamicColorScheme

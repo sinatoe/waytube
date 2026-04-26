@@ -1,10 +1,10 @@
 package com.waytube.app.search.data
 
 import com.waytube.app.common.data.fetch
+import com.waytube.app.common.data.mapping.toChannelItem
+import com.waytube.app.common.data.mapping.toPlaylistItem
+import com.waytube.app.common.data.mapping.toVideoItem
 import com.waytube.app.common.data.paginate
-import com.waytube.app.common.data.toChannelItem
-import com.waytube.app.common.data.toPlaylistItem
-import com.waytube.app.common.data.toVideoItem
 import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import com.waytube.app.search.domain.SearchFilter

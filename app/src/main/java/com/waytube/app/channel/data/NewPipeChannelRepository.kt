@@ -3,8 +3,8 @@ package com.waytube.app.channel.data
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.channel.domain.ChannelRepository
 import com.waytube.app.common.data.fetch
+import com.waytube.app.common.data.mapping.toVideoItem
 import com.waytube.app.common.data.paginate
-import com.waytube.app.common.data.toVideoItem
 import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import com.waytube.app.common.domain.VideoItem

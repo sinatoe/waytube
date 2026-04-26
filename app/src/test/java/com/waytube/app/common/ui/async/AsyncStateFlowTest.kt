@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.async
 
 import app.cash.turbine.test
 import com.waytube.app.common.domain.FetchError
@@ -8,7 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class AsyncStateTest {
+class AsyncStateFlowTest {
     @Test
     fun `test sequential fetch responses`() = runTest {
         val resultIterator = iterator {
@@ -18,7 +18,7 @@ class AsyncStateTest {
             }
         }
 
-        val flow = AsyncState.createFlow(resultIterator::next)
+        val flow = asyncStateFlow(resultIterator::next)
 
         flow.test {
             assertEquals(AsyncState.Loading, awaitItem())

@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.pagination
 
 import app.cash.turbine.test
 import com.waytube.app.common.domain.FetchError
@@ -8,7 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class PaginatedDataTest {
+class PaginatedDataFlowTest {
     @Test
     fun `test sequential paginated fetch responses`() = runTest {
         val nextResultIterator = iterator {
@@ -28,7 +28,7 @@ class PaginatedDataTest {
             )
         }
 
-        val flow = PaginatedData.createFlow(resultIterator::next)
+        val flow = paginatedDataFlow(resultIterator::next)
 
         flow.test {
             awaitItem().let { data ->

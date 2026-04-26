@@ -15,7 +15,8 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.google.common.util.concurrent.ListenableFuture
-import com.waytube.app.common.ui.AsyncState
+import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.async.asyncStateFlow
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,7 +82,7 @@ class VideoViewModel(
         .map { it?.videoId }
         .distinctUntilChanged()
         .flatMapLatest { id ->
-            if (id != null) AsyncState.createFlow { repository.getVideo(id) } else flowOf(null)
+            if (id != null) asyncStateFlow { repository.getVideo(id) } else flowOf(null)
         }
         .stateIn(
             scope = viewModelScope,
@@ -119,7 +120,7 @@ class VideoViewModel(
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
-                AsyncState.createFlow { repository.getSkipSegments(id) }
+                asyncStateFlow { repository.getSkipSegments(id) }
             } else flowOf(null)
         }
         .stateIn(

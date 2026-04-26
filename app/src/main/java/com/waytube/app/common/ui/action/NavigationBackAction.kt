@@ -1,4 +1,4 @@
-package com.waytube.app.common.ui
+package com.waytube.app.common.ui.action
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect

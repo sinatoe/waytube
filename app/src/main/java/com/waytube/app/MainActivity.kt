@@ -9,7 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.waytube.app.common.ui.AppTheme
+import com.waytube.app.common.ui.theming.AppTheme
 import com.waytube.app.navigation.ui.NavigationHost
 import com.waytube.app.navigation.ui.NavigationViewModel
 import com.waytube.app.video.ui.VideoViewModel
