@@ -19,6 +19,7 @@ import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
+import com.waytube.app.video.domain.VideoResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -78,7 +79,7 @@ class VideoViewModel(
             initialValue = false
         )
 
-    val videoState = sessionState
+    val videoResponseState = sessionState
         .map { it?.videoId }
         .distinctUntilChanged()
         .flatMapLatest { id ->
@@ -89,6 +90,10 @@ class VideoViewModel(
             started = SharingStarted.Lazily,
             initialValue = null
         )
+
+    private val videoOrNull = videoResponseState
+        .map { ((it as? AsyncState.Loaded)?.data as? VideoResponse.Content)?.video }
+        .distinctUntilChanged()
 
     val isActive = sessionState
         .map { it != null }
@@ -115,8 +120,8 @@ class VideoViewModel(
             initialValue = false
         )
 
-    val skipSegments = videoState
-        .map { ((it as? AsyncState.Loaded)?.data as? Video.Regular)?.id }
+    val skipSegments = videoOrNull
+        .map { (it as? Video.Regular)?.id }
         .distinctUntilChanged()
         .flatMapLatest { id ->
             if (id != null) {
@@ -131,9 +136,7 @@ class VideoViewModel(
 
     init {
         combine(
-            videoState
-                .map { (it as? AsyncState.Loaded)?.data }
-                .distinctUntilChanged(),
+            videoOrNull,
             player,
             sessionState.filterNotNull().distinctUntilChangedBy { it.videoId }.map { it.position }
         ) { video, player, position -> Triple(video, player, position) }
@@ -204,8 +207,8 @@ class VideoViewModel(
             .launchIn(viewModelScope)
 
         combine(
-            videoState
-                .map { (it as? AsyncState.Loaded)?.data is Video.Regular }
+            videoOrNull
+                .map { it is Video.Regular }
                 .distinctUntilChanged(),
             player
         ) { isRegularVideo, player -> isRegularVideo to player }

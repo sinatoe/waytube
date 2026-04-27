@@ -16,16 +16,17 @@
     <string name="label_search">Search</string>
     <string name="label_share">Share</string>
     <string name="label_videos">Videos</string>
-    <string name="message_content_age_restricted">This content is age-restricted</string>
+    <string name="message_channel_unavailable">This channel is unavailable</string>
+    <string name="message_content_ip_address_blocked">Access to the content from your IP address was blocked</string>
     <string name="message_content_load_error">There was an error loading the content</string>
     <string name="message_content_network_error">Network connection error</string>
-    <string name="message_content_unavailable">This content is not available</string>
     <string name="message_paging_empty">No items to show</string>
     <string name="message_paging_load_error">There was an error loading items</string>
-    <string name="message_video_load_error">There was an error loading video</string>
+    <string name="message_playlist_unavailable">This playlist is unavailable</string>
     <string name="message_video_age_restricted">This video is age-restricted</string>
-    <string name="message_video_ip_address_blocked">Access to videos from your IP address was blocked</string>
-    <string name="message_video_unavailable">This video is not available</string>
-    <string name="message_video_unsupported">This video is not supported</string>
+    <string name="message_video_members_only">This video is available only for channel members</string>
+    <string name="message_video_private">This video is private</string>
+    <string name="message_video_region_blocked">This video is blocked in your region</string>
+    <string name="message_video_unavailable">This video is unavailable</string>
     <string name="separator_bullet">" • "</string>
 </resources>

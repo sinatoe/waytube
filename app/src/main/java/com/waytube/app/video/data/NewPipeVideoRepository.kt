@@ -5,6 +5,8 @@ import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.video.domain.SkipSegment
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
+import com.waytube.app.video.domain.VideoResponse
+import com.waytube.app.video.domain.VideoRestriction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -12,6 +14,11 @@ import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
+import org.schabi.newpipe.extractor.exceptions.GeographicRestrictionException
+import org.schabi.newpipe.extractor.exceptions.PaidContentException
+import org.schabi.newpipe.extractor.exceptions.PrivateContentException
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import java.io.IOException
@@ -21,14 +28,26 @@ class NewPipeVideoRepository(
     private val okHttpClient: OkHttpClient,
     private val json: Json
 ) : VideoRepository {
-    override suspend fun getVideo(id: String): FetchResult<Video> =
+    override suspend fun getVideo(id: String): FetchResult<VideoResponse> =
         fetch {
-            StreamInfo
-                .getInfo(
+            try {
+                val info = StreamInfo.getInfo(
                     ServiceList.YouTube,
                     ServiceList.YouTube.streamLHFactory.getUrl(id)
                 )
-                .toVideo()
+
+                VideoResponse.Content(info.toVideo())
+            } catch (e: ContentNotAvailableException) {
+                VideoResponse.Unavailable(
+                    restriction = when (e) {
+                        is AgeRestrictedContentException -> VideoRestriction.AGE
+                        is GeographicRestrictionException -> VideoRestriction.REGION
+                        is PaidContentException -> VideoRestriction.MEMBERS_ONLY
+                        is PrivateContentException -> VideoRestriction.PRIVATE
+                        else -> null
+                    }
+                )
+            }
         }
 
     override suspend fun getSkipSegments(id: String): FetchResult<List<SkipSegment>> =

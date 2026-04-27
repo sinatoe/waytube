@@ -27,27 +27,29 @@ class NewPipeSearchRepository : SearchRepository {
         query: String,
         filter: SearchFilter?
     ): FetchResult<Page<SearchResult>> =
-        ServiceList.YouTube
-            .getSearchExtractor(
-                query,
-                listOfNotNull(
-                    when (filter) {
-                        SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
-                        SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
-                        SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
-                        null -> null
-                    },
-                ),
-                null
-            )
-            .paginate(
-                treatErrorAsEmpty = { it is SearchExtractor.NothingFoundException }
-            ) { item ->
-                when (item) {
-                    is StreamInfoItem -> item.toVideoItem()?.let(SearchResult::Video)
-                    is ChannelInfoItem -> SearchResult.Channel(item.toChannelItem())
-                    is PlaylistInfoItem -> item.toPlaylistItem()?.let(SearchResult::Playlist)
-                    else -> null
+        fetch {
+            ServiceList.YouTube
+                .getSearchExtractor(
+                    query,
+                    listOfNotNull(
+                        when (filter) {
+                            SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
+                            SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
+                            SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
+                            null -> null
+                        },
+                    ),
+                    null
+                )
+                .paginate(
+                    treatErrorAsEmpty = { it is SearchExtractor.NothingFoundException }
+                ) { item ->
+                    when (item) {
+                        is StreamInfoItem -> item.toVideoItem()?.let(SearchResult::Video)
+                        is ChannelInfoItem -> SearchResult.Channel(item.toChannelItem())
+                        is PlaylistInfoItem -> item.toPlaylistItem()?.let(SearchResult::Playlist)
+                        else -> null
+                    }
                 }
-            }
+        }
 }

@@ -21,7 +21,7 @@ fun <T> AsyncContent(
     content: @Composable (AsyncState.Loaded<T>) -> Unit
 ) {
     when (state) {
-        is AsyncState.Loading -> {
+        AsyncState.Loading -> {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -42,9 +42,10 @@ fun <T> AsyncContent(
                 StateMessage(
                     text = stringResource(
                         when (state.error) {
-                            FetchError.AGE_RESTRICTED -> R.string.message_content_age_restricted
-                            FetchError.CONTENT_UNAVAILABLE -> R.string.message_content_unavailable
                             FetchError.NETWORK -> R.string.message_content_network_error
+                            FetchError.IP_ADDRESS_BLOCKED ->
+                                R.string.message_content_ip_address_blocked
+
                             FetchError.UNKNOWN -> R.string.message_content_load_error
                         }
                     ),

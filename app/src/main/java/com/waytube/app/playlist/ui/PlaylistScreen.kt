@@ -1,5 +1,6 @@
 package com.waytube.app.playlist.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -32,14 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
-import com.waytube.app.common.ui.element.BackButton
-import com.waytube.app.common.ui.element.PullToRefreshLayout
-import com.waytube.app.common.ui.element.StyledImage
-import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.action.rememberNavigationBackAction
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.element.BackButton
+import com.waytube.app.common.ui.element.PullToRefreshLayout
+import com.waytube.app.common.ui.element.StateMessage
+import com.waytube.app.common.ui.element.StyledImage
+import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
 import com.waytube.app.common.ui.formatting.toPluralCount
 import com.waytube.app.common.ui.menu.ItemMenuSheet
@@ -111,7 +114,7 @@ private fun PlaylistScreenContent(
                     Text(text = stringResource(R.string.label_playlist))
                 },
                 actions = {
-                    (bundleState() as? AsyncState.Loaded)?.data?.playlist?.let { playlist ->
+                    ((bundleState() as? AsyncState.Loaded)?.data as? PlaylistBundle.Content)?.playlist?.let { playlist ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -130,29 +133,47 @@ private fun PlaylistScreenContent(
         AsyncContent(
             state = bundleState(),
             contentPadding = contentPadding
-        ) { (data, isRefreshing, refresh) ->
-            PullToRefreshLayout(
-                isRefreshing = isRefreshing,
-                onRefresh = refresh,
-                contentPadding = contentPadding
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding
-                ) {
-                    item {
-                        PlaylistScreenCard(playlist = data.playlist)
-                    }
+        ) { (bundle, isRefreshing, refresh) ->
+            when (bundle) {
+                is PlaylistBundle.Content -> {
+                    PullToRefreshLayout(
+                        isRefreshing = isRefreshing,
+                        onRefresh = refresh,
+                        contentPadding = contentPadding
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = contentPadding
+                        ) {
+                            item {
+                                PlaylistScreenCard(playlist = bundle.playlist)
+                            }
 
-                    paginatedItems(data.videoItems) { item ->
-                        VideoItemCard(
-                            item = item,
-                            onClick = { onPlayVideo(item.id) },
-                            onLongClick = { selectedItem = item }
+                            paginatedItems(bundle.videoItems) { item ->
+                                VideoItemCard(
+                                    item = item,
+                                    onClick = { onPlayVideo(item.id) },
+                                    onLongClick = { selectedItem = item }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                PlaylistBundle.Unavailable -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(contentPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        StateMessage(
+                            text = stringResource(R.string.message_playlist_unavailable)
                         )
                     }
                 }
             }
+
         }
     }
 }
@@ -206,7 +227,7 @@ private fun PlaylistScreenContentPreview() {
         PlaylistScreenContent(
             bundleState = {
                 AsyncState.Loaded(
-                    data = PlaylistBundle(
+                    data = PlaylistBundle.Content(
                         playlist = Playlist(
                             id = "",
                             url = "",

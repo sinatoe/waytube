@@ -1,6 +1,7 @@
 package com.waytube.app.channel.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -38,14 +39,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
-import com.waytube.app.common.ui.element.BackButton
-import com.waytube.app.common.ui.element.PullToRefreshLayout
-import com.waytube.app.common.ui.element.StyledImage
-import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.action.rememberNavigationBackAction
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.element.BackButton
+import com.waytube.app.common.ui.element.PullToRefreshLayout
+import com.waytube.app.common.ui.element.StateMessage
+import com.waytube.app.common.ui.element.StyledImage
+import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
 import com.waytube.app.common.ui.formatting.toPluralCount
 import com.waytube.app.common.ui.menu.ItemMenuSheet
@@ -106,7 +108,7 @@ private fun ChannelScreenContent(
                     Text(text = stringResource(R.string.label_channel))
                 },
                 actions = {
-                    (bundleState() as? AsyncState.Loaded)?.data?.channel?.let { channel ->
+                    ((bundleState() as? AsyncState.Loaded)?.data as? ChannelBundle.Content)?.channel?.let { channel ->
                         MoreOptionsMenu(
                             actions = listOf(
                                 MenuAction(
@@ -125,25 +127,42 @@ private fun ChannelScreenContent(
         AsyncContent(
             state = bundleState(),
             contentPadding = contentPadding
-        ) { (data, isRefreshing, refresh) ->
-            PullToRefreshLayout(
-                isRefreshing = isRefreshing,
-                onRefresh = refresh,
-                contentPadding = contentPadding
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding
-                ) {
-                    item {
-                        ChannelScreenCard(channel = data.channel)
-                    }
+        ) { (bundle, isRefreshing, refresh) ->
+            when (bundle) {
+                is ChannelBundle.Content -> {
+                    PullToRefreshLayout(
+                        isRefreshing = isRefreshing,
+                        onRefresh = refresh,
+                        contentPadding = contentPadding
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = contentPadding
+                        ) {
+                            item {
+                                ChannelScreenCard(channel = bundle.channel)
+                            }
 
-                    paginatedItems(data.videoItems) { item ->
-                        VideoItemCard(
-                            item = item,
-                            onClick = { onPlayVideo(item.id) },
-                            onLongClick = { selectedItem = item }
+                            paginatedItems(bundle.videoItems) { item ->
+                                VideoItemCard(
+                                    item = item,
+                                    onClick = { onPlayVideo(item.id) },
+                                    onLongClick = { selectedItem = item }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                ChannelBundle.Unavailable -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(contentPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        StateMessage(
+                            text = stringResource(R.string.message_channel_unavailable)
                         )
                     }
                 }
@@ -212,7 +231,7 @@ private fun ChannelScreenContentPreview() {
         ChannelScreenContent(
             bundleState = {
                 AsyncState.Loaded(
-                    data = ChannelBundle(
+                    data = ChannelBundle.Content(
                         channel = Channel(
                             id = "",
                             url = "",
