@@ -109,17 +109,21 @@ class SearchViewModel(
         suggestionsQuery.value = query
     }
 
-    fun trySubmit(query: String): Boolean = query
-        .takeIf { it.isNotBlank() }
-        ?.also { query ->
-            searchState.update { state ->
-                if (state?.query != query) SearchState(query) else state
-            }
-        } != null
+    fun trySubmit(query: String): Boolean {
+        if (query.isBlank()) {
+            return false
+        }
+
+        searchState.update { state ->
+            if (state?.query != query) SearchState(query) else state
+        }
+
+        return true
+    }
 
     fun toggleFilter(filter: SearchFilter) {
         searchState.update { state ->
-            state?.copy(filter = filter.takeIf { state.filter != it }) ?: state
+            state?.copy(filter = filter.takeIf { state.filter != it })
         }
     }
 
