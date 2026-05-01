@@ -62,7 +62,7 @@
         </activity>
 
         <service
-            android:name=".video.service.VideoSessionService"
+            android:name=".playback.service.PlaybackService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
             android:permission="android.permission.FOREGROUND_SERVICE">

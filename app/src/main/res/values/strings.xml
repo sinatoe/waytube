@@ -15,6 +15,7 @@
     <string name="label_retry">Retry</string>
     <string name="label_search">Search</string>
     <string name="label_share">Share</string>
+    <string name="label_video">Video</string>
     <string name="label_videos">Videos</string>
     <string name="message_channel_unavailable">This channel is unavailable</string>
     <string name="message_content_ip_address_blocked">Access to the content from your IP address was blocked</string>

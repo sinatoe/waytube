@@ -1,4 +1,4 @@
-package com.waytube.app.video.data
+package com.waytube.app.playback.data
 
 import android.content.Context
 import android.graphics.Bitmap
