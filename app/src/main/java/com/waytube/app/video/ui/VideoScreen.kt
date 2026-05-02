@@ -1,6 +1,7 @@
 package com.waytube.app.video.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -15,12 +16,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
@@ -39,6 +45,25 @@ fun VideoScreen(viewModel: VideoViewModel) {
         }
 
         is VideoScene.Playback -> {
+            val view = LocalView.current
+            val activity = LocalActivity.current
+
+            DisposableEffect(Unit) {
+                val insetsController = activity?.let {
+                    WindowCompat.getInsetsController(it.window, view)
+                }
+
+                insetsController?.apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+
+                onDispose {
+                    insetsController?.show(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+
             VideoPlaybackSceneContent(scene = scene)
         }
     }
