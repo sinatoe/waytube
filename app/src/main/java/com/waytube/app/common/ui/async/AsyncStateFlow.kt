@@ -86,6 +86,23 @@ fun <T> asyncStateFlow(fetch: suspend () -> FetchResult<T>): Flow<AsyncState<T>>
         }
 }
 
+fun <T, R> Flow<AsyncState<T>>.mapLoaded(
+    transform: (T) -> R
+): Flow<AsyncState<R>> =
+    map { state ->
+        when (state) {
+            is AsyncState.Loading, is AsyncState.Error -> state
+
+            is AsyncState.Loaded -> {
+                AsyncState.Loaded(
+                    data = transform(state.data),
+                    isRefreshing = state.isRefreshing,
+                    refresh = state.refresh
+                )
+            }
+        }
+    }
+
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T, R> Flow<AsyncState<T>>.flatMapLoaded(
     transform: suspend (T) -> Flow<R>

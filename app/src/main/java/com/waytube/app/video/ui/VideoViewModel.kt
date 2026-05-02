@@ -11,7 +11,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
-import com.waytube.app.common.ui.async.flatMapLoaded
+import com.waytube.app.common.ui.async.mapLoaded
 import com.waytube.app.playback.ui.PlaybackManager
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
@@ -45,15 +45,29 @@ class VideoViewModel(
 
     private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
-    private val responseState = asyncStateFlow { repository.getVideo(id) }
+    private val previewState = asyncStateFlow { repository.getVideo(id) }
+        .mapLoaded { response ->
+            when (response) {
+                is VideoResponse.Content -> {
+                    VideoPreview.Content(
+                        video = response.video,
+                        play = { isPlaybackRequested.tryEmit(true) }
+                    )
+                }
+
+                is VideoResponse.Unavailable -> {
+                    VideoPreview.Unavailable(response.restriction)
+                }
+            }
+        }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    private val player = responseState
-        .map { ((it as? AsyncState.Loaded)?.data as? VideoResponse.Content)?.video }
+    val scene = previewState
+        .map { ((it as? AsyncState.Loaded)?.data as? VideoPreview.Content)?.video }
         .distinctUntilChanged()
         .flatMapLatest { video ->
             isPlaybackRequested
@@ -103,40 +117,25 @@ class VideoViewModel(
                             play()
                         }
                     }
+                    .map { player ->
+                        player?.let {
+                            VideoScene.Playback(
+                                video = video,
+                                player = it,
+                                stop = { isPlaybackRequested.tryEmit(false) }
+                            )
+                        }
+                    }
             } else {
                 flowOf(null)
             }
         }
-
-    val bundleState = responseState
-        .flatMapLoaded { response ->
-            when (response) {
-                is VideoResponse.Content -> {
-                    player.map { player ->
-                        VideoBundle.Content(
-                            video = response.video,
-                            playbackState = if (player != null) {
-                                VideoPlaybackState.Active(
-                                    player = player,
-                                    stop = { isPlaybackRequested.tryEmit(false) }
-                                )
-                            } else {
-                                VideoPlaybackState.Idle(
-                                    play = { isPlaybackRequested.tryEmit(true) }
-                                )
-                            }
-                        )
-                    }
-                }
-
-                is VideoResponse.Unavailable -> {
-                    flowOf(VideoBundle.Unavailable(response.restriction))
-                }
-            }
+        .flatMapLatest { playbackScene ->
+            playbackScene?.let(::flowOf) ?: previewState.map(VideoScene::Preview)
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = AsyncState.Loading
+            initialValue = VideoScene.Preview(AsyncState.Loading)
         )
 }
