@@ -14,13 +14,14 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.waytube.app.channel.ui.ChannelScreen
 import com.waytube.app.navigation.domain.DeepLinkResult
+import com.waytube.app.playback.ui.PlaybackManager
 import com.waytube.app.playlist.ui.PlaylistScreen
 import com.waytube.app.search.ui.SearchScreen
 import com.waytube.app.video.ui.VideoScreen
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
-
 
 @Serializable
 private data object SearchRoute : NavKey
@@ -35,7 +36,10 @@ private data class ChannelRoute(val id: String) : NavKey
 private data class PlaylistRoute(val id: String) : NavKey
 
 @Composable
-fun NavigationHost(viewModel: NavigationViewModel) {
+fun NavigationHost(
+    viewModel: NavigationViewModel,
+    playbackManager: PlaybackManager = koinInject()
+) {
     val backStack = rememberNavBackStack(SearchRoute)
 
     LaunchedEffect(Unit) {
@@ -46,6 +50,12 @@ fun NavigationHost(viewModel: NavigationViewModel) {
                 is DeepLinkResult.Playlist -> PlaylistRoute(result.id)
             }
         }
+    }
+
+    LaunchedEffect(backStack.last()) {
+        playbackManager.setActiveId(
+            (backStack.last() as? VideoRoute)?.id
+        )
     }
 
     Surface {

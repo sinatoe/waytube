@@ -13,8 +13,10 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.waytube.app.playback.data.CoilBitmapLoader
 import com.waytube.app.playback.service.PlaybackService
+import com.waytube.app.playback.ui.PlaybackManager
 import kotlinx.coroutines.CoroutineScope
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 val playbackModule = module {
@@ -44,13 +46,14 @@ val playbackModule = module {
     factory<BitmapLoader> { (scope: CoroutineScope) ->
         CoilBitmapLoader(androidContext(), scope)
     }
-    factory {
+    single {
         MediaController.Builder(
             androidContext(),
             SessionToken(
                 androidContext(),
                 ComponentName(androidContext(), PlaybackService::class.java)
             )
-        ).buildAsync()
+        )
     }
+    singleOf(::PlaybackManager)
 }
