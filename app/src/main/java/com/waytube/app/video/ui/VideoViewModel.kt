@@ -9,6 +9,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
 import com.waytube.app.common.ui.async.mapLoaded
@@ -18,6 +19,7 @@ import com.waytube.app.video.domain.VideoRepository
 import com.waytube.app.video.domain.VideoResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -39,7 +41,7 @@ class VideoViewModel(
     private val id: String,
     savedStateHandle: SavedStateHandle,
     private val repository: VideoRepository,
-    playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
     private var savedPosition by savedStateHandle.saved<Duration?> { null }
 
@@ -78,54 +80,15 @@ class VideoViewModel(
         }
         .flatMapLatest { video ->
             if (video != null) {
-                playbackManager.requestPlayer(id)
-                    .transformWhile { player ->
-                        emit(player)
-                        player != null
+                requestPlayer(video).map { player ->
+                    player?.let {
+                        VideoScene.Playback(
+                            video = video,
+                            player = it,
+                            stop = { isPlaybackRequested.tryEmit(false) }
+                        )
                     }
-                    .transformLatest { player ->
-                        emit(player)
-                        while (player != null) {
-                            delay(1.seconds)
-                            savedPosition = player.currentPosition.milliseconds
-                        }
-                    }
-                    .onEach { player ->
-                        player?.apply {
-                            val (uri, mimeType) = when (video) {
-                                is Video.Regular -> video.dashManifestUrl to MimeTypes.APPLICATION_MPD
-                                is Video.Live -> video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
-                            }
-
-                            val mediaMetadata = MediaMetadata.Builder()
-                                .setTitle(video.title)
-                                .setArtist(video.channelName)
-                                .setArtworkUri(video.thumbnailUrl.toUri())
-                                .build()
-
-                            val mediaItem = MediaItem.Builder()
-                                .setUri(uri)
-                                .setMimeType(mimeType)
-                                .setMediaMetadata(mediaMetadata)
-                                .build()
-
-                            setMediaItem(
-                                mediaItem,
-                                savedPosition?.inWholeMilliseconds ?: C.TIME_UNSET
-                            )
-                            prepare()
-                            play()
-                        }
-                    }
-                    .map { player ->
-                        player?.let {
-                            VideoScene.Playback(
-                                video = video,
-                                player = it,
-                                stop = { isPlaybackRequested.tryEmit(false) }
-                            )
-                        }
-                    }
+                }
             } else {
                 flowOf(null)
             }
@@ -138,4 +101,45 @@ class VideoViewModel(
             started = SharingStarted.Lazily,
             initialValue = VideoScene.Preview(AsyncState.Loading)
         )
+
+    private fun requestPlayer(video: Video): Flow<Player?> =
+        playbackManager.requestPlayer(id)
+            .transformWhile { player ->
+                emit(player)
+                player != null
+            }
+            .transformLatest { player ->
+                emit(player)
+                while (player != null) {
+                    delay(1.seconds)
+                    savedPosition = player.currentPosition.milliseconds
+                }
+            }
+            .onEach { player ->
+                player?.apply {
+                    val (uri, mimeType) = when (video) {
+                        is Video.Regular -> video.dashManifestUrl to MimeTypes.APPLICATION_MPD
+                        is Video.Live -> video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
+                    }
+
+                    val mediaMetadata = MediaMetadata.Builder()
+                        .setTitle(video.title)
+                        .setArtist(video.channelName)
+                        .setArtworkUri(video.thumbnailUrl.toUri())
+                        .build()
+
+                    val mediaItem = MediaItem.Builder()
+                        .setUri(uri)
+                        .setMimeType(mimeType)
+                        .setMediaMetadata(mediaMetadata)
+                        .build()
+
+                    setMediaItem(
+                        mediaItem,
+                        savedPosition?.inWholeMilliseconds ?: C.TIME_UNSET
+                    )
+                    prepare()
+                    play()
+                }
+            }
 }
