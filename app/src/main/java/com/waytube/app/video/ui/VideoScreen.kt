@@ -185,7 +185,7 @@ private fun VideoPreviewSceneContent(
                         }
 
                         Column(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
