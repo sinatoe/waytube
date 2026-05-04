@@ -7,6 +7,7 @@
     <string name="cd_play">Play</string>
     <string name="cd_selected">Selected</string>
     <string name="cd_stop">Stop</string>
+    <string name="label_approval_percentage">%1$d%% approval</string>
     <string name="label_channel">Channel</string>
     <string name="label_channels">Channels</string>
     <string name="label_go_to_channel">Go to channel</string>

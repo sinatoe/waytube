@@ -4,23 +4,23 @@ import kotlin.time.Instant
 
 sealed interface Video {
     val id: String
+    val url: String
     val title: String
     val thumbnailUrl: String
     val descriptionHtml: String
+    val approvalRatio: Float?
     val channelId: String
     val channelName: String
-    val channelAvatarUrl: String
-    val channelSubscriberCount: Long?
 
     data class Regular(
         override val id: String,
+        override val url: String,
         override val title: String,
         override val thumbnailUrl: String,
         override val descriptionHtml: String,
+        override val approvalRatio: Float?,
         override val channelId: String,
         override val channelName: String,
-        override val channelAvatarUrl: String,
-        override val channelSubscriberCount: Long?,
         val dashManifestUrl: String,
         val viewCount: Long,
         val uploadedAt: Instant
@@ -28,13 +28,13 @@ sealed interface Video {
 
     data class Live(
         override val id: String,
+        override val url: String,
         override val title: String,
         override val thumbnailUrl: String,
         override val descriptionHtml: String,
+        override val approvalRatio: Float?,
         override val channelId: String,
         override val channelName: String,
-        override val channelAvatarUrl: String,
-        override val channelSubscriberCount: Long?,
         val hlsPlaylistUrl: String,
         val watchingCount: Long
     ) : Video
