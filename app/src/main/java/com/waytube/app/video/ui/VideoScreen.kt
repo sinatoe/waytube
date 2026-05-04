@@ -4,14 +4,24 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -19,10 +29,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -35,13 +52,24 @@ import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.element.BackButton
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
+import com.waytube.app.common.ui.formatting.toAbsoluteDateString
+import com.waytube.app.common.ui.formatting.toCompactString
+import com.waytube.app.common.ui.formatting.toPluralCount
+import com.waytube.app.common.ui.theming.AppTheme
+import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRestriction
 
 @Composable
-fun VideoScreen(viewModel: VideoViewModel) {
+fun VideoScreen(
+    viewModel: VideoViewModel,
+    onNavigateToChannel: (String) -> Unit
+) {
     when (val scene = viewModel.scene.collectAsStateWithLifecycle().value) {
         is VideoScene.Preview -> {
-            VideoPreviewSceneContent(scene = scene)
+            VideoPreviewSceneContent(
+                scene = scene,
+                onNavigateToChannel = onNavigateToChannel
+            )
         }
 
         is VideoScene.Playback -> {
@@ -71,7 +99,10 @@ fun VideoScreen(viewModel: VideoViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VideoPreviewSceneContent(scene: VideoScene.Preview) {
+private fun VideoPreviewSceneContent(
+    scene: VideoScene.Preview,
+    onNavigateToChannel: (String) -> Unit
+) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
@@ -94,18 +125,134 @@ private fun VideoPreviewSceneContent(scene: VideoScene.Preview) {
         ) { (preview) ->
             when (preview) {
                 is VideoPreview.Content -> {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(contentPadding),
-                        contentAlignment = Alignment.Center
+                            .verticalScroll(rememberScrollState())
+                            .padding(contentPadding)
                     ) {
-                        StyledImage(
-                            data = preview.video.thumbnailUrl,
+                        AppTheme(darkTheme = true) {
+                            Surface(onClick = preview.play) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    StyledImage(
+                                        data = preview.video.thumbnailUrl,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9)
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_play_arrow),
+                                            contentDescription = stringResource(R.string.cd_play),
+                                            modifier = Modifier.size(36.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier.padding(
+                                start = 12.dp,
+                                top = 12.dp,
+                                end = 12.dp,
+                                bottom = 8.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = preview.video.title,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+
+                            Text(
+                                when (preview.video) {
+                                    is Video.Regular -> {
+                                        listOfNotNull(
+                                            pluralStringResource(
+                                                R.plurals.view_count,
+                                                preview.video.viewCount.toPluralCount(),
+                                                preview.video.viewCount.toCompactString()
+                                            ),
+                                            preview.video.uploadedAt.toAbsoluteDateString()
+                                        )
+                                            .joinToString(stringResource(R.string.separator_bullet))
+                                    }
+
+                                    is Video.Live -> {
+                                        pluralStringResource(
+                                            R.plurals.watching_count,
+                                            preview.video.watchingCount.toPluralCount(),
+                                            preview.video.watchingCount.toCompactString()
+                                        )
+                                    }
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(16f / 9)
-                                .clickable { preview.play() }
+                                .clickable { onNavigateToChannel(preview.video.channelId) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            StyledImage(
+                                data = preview.video.channelAvatarUrl,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                            )
+
+                            Column {
+                                Text(
+                                    text = preview.video.channelName,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+
+                                preview.video.channelSubscriberCount?.let { subscriberCount ->
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.subscriber_count,
+                                            subscriberCount.toPluralCount(),
+                                            subscriberCount.toCompactString()
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = AnnotatedString.fromHtml(preview.video.descriptionHtml),
+                            modifier = Modifier.padding(
+                                start = 12.dp,
+                                top = 8.dp,
+                                end = 12.dp,
+                                bottom = 12.dp
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }

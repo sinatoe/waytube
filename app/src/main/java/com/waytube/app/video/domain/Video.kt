@@ -1,24 +1,41 @@
 package com.waytube.app.video.domain
 
+import kotlin.time.Instant
+
 sealed interface Video {
     val id: String
     val title: String
-    val channelName: String
     val thumbnailUrl: String
+    val descriptionHtml: String
+    val channelId: String
+    val channelName: String
+    val channelAvatarUrl: String
+    val channelSubscriberCount: Long?
 
     data class Regular(
         override val id: String,
         override val title: String,
-        override val channelName: String,
         override val thumbnailUrl: String,
-        val dashManifestUrl: String
+        override val descriptionHtml: String,
+        override val channelId: String,
+        override val channelName: String,
+        override val channelAvatarUrl: String,
+        override val channelSubscriberCount: Long?,
+        val dashManifestUrl: String,
+        val viewCount: Long,
+        val uploadedAt: Instant
     ) : Video
 
     data class Live(
         override val id: String,
         override val title: String,
-        override val channelName: String,
         override val thumbnailUrl: String,
-        val hlsPlaylistUrl: String
+        override val descriptionHtml: String,
+        override val channelId: String,
+        override val channelName: String,
+        override val channelAvatarUrl: String,
+        override val channelSubscriberCount: Long?,
+        val hlsPlaylistUrl: String,
+        val watchingCount: Long
     ) : Video
 }

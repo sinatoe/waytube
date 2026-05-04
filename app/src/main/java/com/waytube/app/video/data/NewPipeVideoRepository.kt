@@ -23,6 +23,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toKotlinInstant
 
 class NewPipeVideoRepository(
     private val okHttpClient: OkHttpClient,
@@ -75,22 +76,36 @@ class NewPipeVideoRepository(
 
 private fun StreamInfo.toVideo(): Video {
     val thumbnailUrl = thumbnails.maxBy { it.height }.url
+    val channelId = ServiceList.YouTube.channelLHFactory.getId(uploaderUrl)
+    val channelSubscriberCount = uploaderSubscriberCount.takeIf { it != -1L }
+    val channelAvatarUrl = uploaderAvatars.maxBy { it.height }.url
 
     return when (streamType) {
         StreamType.VIDEO_STREAM -> Video.Regular(
             id = id,
             title = name,
-            channelName = uploaderName,
             thumbnailUrl = thumbnailUrl,
-            dashManifestUrl = generateDashManifestUrl()
+            descriptionHtml = description.content,
+            channelId = channelId,
+            channelName = uploaderName,
+            channelSubscriberCount = channelSubscriberCount,
+            channelAvatarUrl = channelAvatarUrl,
+            dashManifestUrl = generateDashManifestUrl(),
+            uploadedAt = uploadDate.instant.toKotlinInstant(),
+            viewCount = viewCount
         )
 
         StreamType.LIVE_STREAM -> Video.Live(
             id = id,
             title = name,
-            channelName = uploaderName,
             thumbnailUrl = thumbnailUrl,
-            hlsPlaylistUrl = hlsUrl
+            descriptionHtml = description.content,
+            channelId = channelId,
+            channelName = uploaderName,
+            channelAvatarUrl = channelAvatarUrl,
+            channelSubscriberCount = channelSubscriberCount,
+            hlsPlaylistUrl = hlsUrl,
+            watchingCount = viewCount
         )
 
         else -> error("Unknown stream type")

@@ -94,7 +94,11 @@ class VideoViewModel(
             }
         }
         .flatMapLatest { playbackScene ->
-            playbackScene?.let(::flowOf) ?: previewState.map(VideoScene::Preview)
+            if (playbackScene != null) {
+                flowOf(playbackScene)
+            } else {
+                previewState.map { VideoScene.Preview(it) }
+            }
         }
         .stateIn(
             scope = viewModelScope,

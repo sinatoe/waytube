@@ -92,7 +92,10 @@ fun NavigationHost(
 
                 entry<VideoRoute> { (id) ->
                     VideoScreen(
-                        viewModel = koinViewModel { parametersOf(id) }
+                        viewModel = koinViewModel { parametersOf(id) },
+                        onNavigateToChannel = { id ->
+                            backStack += ChannelRoute(id)
+                        }
                     )
                 }
 
