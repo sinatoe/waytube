@@ -64,12 +64,12 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun ChannelScreen(
     viewModel: ChannelViewModel,
-    onPlayVideo: (String) -> Unit
+    onNavigateToVideo: (String) -> Unit
 ) {
     ChannelScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
-        onPlayVideo = onPlayVideo
+        onNavigateToVideo = onNavigateToVideo
     )
 }
 
@@ -78,7 +78,7 @@ fun ChannelScreen(
 private fun ChannelScreenContent(
     bundleState: () -> AsyncState<ChannelBundle>,
     onShare: (String) -> Unit,
-    onPlayVideo: (String) -> Unit
+    onNavigateToVideo: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -146,7 +146,7 @@ private fun ChannelScreenContent(
                             paginatedItems(bundle.videoItems) { item ->
                                 VideoItemCard(
                                     item = item,
-                                    onClick = { onPlayVideo(item.id) },
+                                    onClick = { onNavigateToVideo(item.id) },
                                     onLongClick = { selectedItem = item }
                                 )
                             }
@@ -262,7 +262,7 @@ private fun ChannelScreenContentPreview() {
                 )
             },
             onShare = {},
-            onPlayVideo = {}
+            onNavigateToVideo = {}
         )
     }
 }

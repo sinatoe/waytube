@@ -1,153 +1,129 @@
 package com.waytube.app.video.ui
 
-import android.os.Parcelable
 import androidx.core.net.toUri
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.serialization.saved
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import com.google.common.util.concurrent.ListenableFuture
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
+import com.waytube.app.common.ui.async.mapLoaded
+import com.waytube.app.playback.ui.PlaybackManager
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
 import com.waytube.app.video.domain.VideoResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.WhileSubscribed
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.transformLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.guava.await
-import kotlinx.parcelize.Parcelize
+import kotlinx.coroutines.flow.transformWhile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@Parcelize
-private data class VideoSessionState(
-    val videoId: String,
-    val position: Duration? = null,
-    val skippedSegmentIds: Set<String> = emptySet()
-) : Parcelable
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class VideoViewModel(
+    private val id: String,
     savedStateHandle: SavedStateHandle,
-    private val controllerFuture: ListenableFuture<MediaController>,
-    private val repository: VideoRepository
+    private val repository: VideoRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
-    private val sessionState = savedStateHandle.getMutableStateFlow<VideoSessionState?>(
-        key = "session_state",
-        initialValue = null
-    )
+    private var savedPosition by savedStateHandle.saved<Duration?> { null }
 
-    private val isAutoplayRequested = sessionState
-        .drop(1)
-        .map { true }
-        .take(1)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = false
-        )
+    private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
-    val videoResponseState = sessionState
-        .map { it?.videoId }
-        .distinctUntilChanged()
-        .flatMapLatest { id ->
-            if (id != null) asyncStateFlow { repository.getVideo(id) } else flowOf(null)
+    private val previewState = asyncStateFlow { repository.getVideo(id) }
+        .mapLoaded { response ->
+            when (response) {
+                is VideoResponse.Content -> {
+                    VideoPreview.Content(
+                        video = response.video,
+                        play = { isPlaybackRequested.tryEmit(true) }
+                    )
+                }
+
+                is VideoResponse.Unavailable -> {
+                    VideoPreview.Unavailable(response.restriction)
+                }
+            }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = null
-        )
-
-    private val videoOrNull = videoResponseState
-        .map { ((it as? AsyncState.Loaded)?.data as? VideoResponse.Content)?.video }
-        .distinctUntilChanged()
-
-    val isActive = sessionState
-        .map { it != null }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5.seconds),
-            initialValue = false
-        )
-
-    val player = flow<Player> { emit(controllerFuture.await()) }
         .shareIn(
             scope = viewModelScope,
-            started = SharingStarted.Eagerly,
+            started = SharingStarted.Lazily,
             replay = 1
         )
 
-    val isPlaying = player
-        .flatMapLatest { player ->
-            player.eventsFlow(Player.EVENT_IS_PLAYING_CHANGED) { it.isPlaying }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5.seconds),
-            initialValue = false
-        )
-
-    val skipSegments = videoOrNull
-        .map { (it as? Video.Regular)?.id }
+    val scene = previewState
+        .map { ((it as? AsyncState.Loaded)?.data as? VideoPreview.Content)?.video }
         .distinctUntilChanged()
-        .flatMapLatest { id ->
-            if (id != null) {
-                asyncStateFlow { repository.getSkipSegments(id) }
-            } else flowOf(null)
+        .flatMapLatest { video ->
+            isPlaybackRequested
+                .onStart { emit(false) }
+                .map { isRequested ->
+                    video?.takeIf { isRequested }
+                }
+        }
+        .flatMapLatest { video ->
+            if (video != null) {
+                requestPlayer(video).map { player ->
+                    player?.let {
+                        VideoScene.Playback(
+                            video = video,
+                            player = it,
+                            stop = { isPlaybackRequested.tryEmit(false) }
+                        )
+                    }
+                }
+            } else {
+                flowOf(null)
+            }
+        }
+        .flatMapLatest { playbackScene ->
+            if (playbackScene != null) {
+                flowOf(playbackScene)
+            } else {
+                previewState.map { VideoScene.Preview(it) }
+            }
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = null
+            initialValue = VideoScene.Preview(AsyncState.Loading)
         )
 
-    init {
-        combine(
-            videoOrNull,
-            player,
-            sessionState.filterNotNull().distinctUntilChangedBy { it.videoId }.map { it.position }
-        ) { video, player, position -> Triple(video, player, position) }
-            .onEach { (video, player, position) ->
-                if (video != null) {
+    private fun requestPlayer(video: Video): Flow<Player?> =
+        playbackManager.requestPlayer(id)
+            .transformWhile { player ->
+                emit(player)
+                player != null
+            }
+            .transformLatest { player ->
+                emit(player)
+                while (player != null) {
+                    delay(1.seconds)
+                    savedPosition = player.currentPosition.milliseconds
+                }
+            }
+            .onEach { player ->
+                player?.apply {
                     val (uri, mimeType) = when (video) {
-                        is Video.Regular ->
-                            video.dashManifestUrl to MimeTypes.APPLICATION_MPD
-
-                        is Video.Live ->
-                            video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
+                        is Video.Regular -> video.dashManifestUrl to MimeTypes.APPLICATION_MPD
+                        is Video.Live -> video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
                     }
 
                     val mediaMetadata = MediaMetadata.Builder()
@@ -162,133 +138,12 @@ class VideoViewModel(
                         .setMediaMetadata(mediaMetadata)
                         .build()
 
-                    player.apply {
-                        position?.also { position ->
-                            setMediaItem(mediaItem, position.inWholeMilliseconds)
-                        } ?: setMediaItem(mediaItem)
-                        prepare()
-                        playWhenReady = isAutoplayRequested.value
-                    }
-                } else {
-                    player.apply {
-                        stop()
-                        clearMediaItems()
-                    }
+                    setMediaItem(
+                        mediaItem,
+                        savedPosition?.inWholeMilliseconds ?: C.TIME_UNSET
+                    )
+                    prepare()
+                    play()
                 }
             }
-            .launchIn(viewModelScope)
-
-        combine(
-            player,
-            callbackFlow {
-                val lifecycle = ProcessLifecycleOwner.get().lifecycle
-
-                send(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED).not())
-
-                val observer = LifecycleEventObserver { _, event ->
-                    when (event) {
-                        Lifecycle.Event.ON_START -> trySend(false)
-                        Lifecycle.Event.ON_STOP -> trySend(true)
-                        else -> {}
-                    }
-                }
-
-                lifecycle.addObserver(observer)
-
-                awaitClose { lifecycle.removeObserver(observer) }
-            }
-        ) { player, isAppInBackground -> player to isAppInBackground }
-            .onEach { (player, isAppInBackground) ->
-                player.trackSelectionParameters = player.trackSelectionParameters
-                    .buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, isAppInBackground)
-                    .build()
-            }
-            .launchIn(viewModelScope)
-
-        combine(
-            videoOrNull
-                .map { it is Video.Regular }
-                .distinctUntilChanged(),
-            player
-        ) { isRegularVideo, player -> isRegularVideo to player }
-            .flatMapLatest { (isRegularVideo, player) ->
-                if (isRegularVideo) {
-                    val eventsPosition = player.eventsFlow(
-                        Player.EVENT_IS_PLAYING_CHANGED,
-                        Player.EVENT_POSITION_DISCONTINUITY
-                    ) { it.currentPosition }
-
-                    val pollingPosition = isPlaying.transformLatest { isPlaying ->
-                        while (isPlaying) {
-                            delay(1.seconds)
-                            emit(player.currentPosition)
-                        }
-                    }
-
-                    merge(eventsPosition, pollingPosition)
-                } else emptyFlow()
-            }
-            .onEach { positionMs ->
-                sessionState.update { state ->
-                    state?.copy(position = positionMs.milliseconds)
-                }
-            }
-            .launchIn(viewModelScope)
-
-        combine(
-            player,
-            sessionState,
-            skipSegments.map { (it as? AsyncState.Loaded)?.data }
-        ) { player, state, skipSegments -> Triple(player, state, skipSegments) }
-            .onEach { (player, state, skipSegments) ->
-                if (state?.position != null) {
-                    skipSegments
-                        ?.find { (id, start, end) ->
-                            state.position in start..end && !state.skippedSegmentIds.contains(id)
-                        }
-                        ?.also { segment ->
-                            player.seekTo(segment.end.inWholeMilliseconds)
-                            sessionState.value = state.copy(
-                                skippedSegmentIds = state.skippedSegmentIds + segment.id
-                            )
-                        }
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    fun play(id: String) {
-        sessionState.update { state ->
-            if (state?.videoId != id) VideoSessionState(id) else state
-        }
-    }
-
-    fun stop() {
-        sessionState.value = null
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        MediaController.releaseFuture(controllerFuture)
-    }
-}
-
-private fun <T> Player.eventsFlow(
-    @Player.Event vararg triggerEvents: Int,
-    block: (Player) -> T
-): Flow<T> = callbackFlow {
-    send(block(this@eventsFlow))
-
-    val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) {
-            if (events.containsAny(*triggerEvents)) {
-                trySend(block(player))
-            }
-        }
-    }
-
-    addListener(listener)
-
-    awaitClose { removeListener(listener) }
 }

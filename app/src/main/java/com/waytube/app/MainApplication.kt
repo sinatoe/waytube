@@ -4,6 +4,7 @@ import android.app.Application
 import com.waytube.app.channel.di.channelModule
 import com.waytube.app.navigation.di.navigationModule
 import com.waytube.app.network.di.networkModule
+import com.waytube.app.playback.di.playbackModule
 import com.waytube.app.playlist.di.playlistModule
 import com.waytube.app.preferences.di.preferencesModule
 import com.waytube.app.search.di.searchModule
@@ -25,6 +26,7 @@ class MainApplication : Application() {
                 channelModule,
                 navigationModule,
                 networkModule,
+                playbackModule,
                 playlistModule,
                 preferencesModule,
                 searchModule,

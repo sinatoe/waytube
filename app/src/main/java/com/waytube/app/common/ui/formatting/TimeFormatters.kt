@@ -4,10 +4,14 @@ import android.icu.text.RelativeDateTimeFormatter
 import android.text.format.DateUtils
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.periodUntil
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 fun Duration.toFormattedString(): String = DateUtils.formatElapsedTime(inWholeSeconds)
 
@@ -37,3 +41,9 @@ fun Instant.toRelativeTimeString(now: Instant = Clock.System.now()): String {
         .getInstance(Locale.ENGLISH)
         .format(quantity.toDouble(), direction, unit)
 }
+
+fun Instant.toAbsoluteDateString(): String =
+    DateTimeFormatter
+        .ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(Locale.ENGLISH)
+        .format(toJavaInstant().atZone(ZoneId.systemDefault()))

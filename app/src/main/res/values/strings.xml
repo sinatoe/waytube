@@ -4,8 +4,10 @@
     <string name="cd_back">Back</string>
     <string name="cd_clear">Clear</string>
     <string name="cd_more_options">More options</string>
+    <string name="cd_play">Play</string>
     <string name="cd_selected">Selected</string>
     <string name="cd_stop">Stop</string>
+    <string name="label_approval_percentage">%1$d%% approval</string>
     <string name="label_channel">Channel</string>
     <string name="label_channels">Channels</string>
     <string name="label_go_to_channel">Go to channel</string>
@@ -15,6 +17,7 @@
     <string name="label_retry">Retry</string>
     <string name="label_search">Search</string>
     <string name="label_share">Share</string>
+    <string name="label_video">Video</string>
     <string name="label_videos">Videos</string>
     <string name="message_channel_unavailable">This channel is unavailable</string>
     <string name="message_content_ip_address_blocked">Access to the content from your IP address was blocked</string>

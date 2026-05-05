@@ -1,97 +1,311 @@
 package com.waytube.app.video.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.keepScreenOn
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
+import com.waytube.app.common.ui.action.rememberNavigationBackAction
+import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.element.BackButton
 import com.waytube.app.common.ui.element.StateMessage
-import com.waytube.app.common.ui.theming.AppColorScheme
-import com.waytube.app.video.domain.VideoResponse
+import com.waytube.app.common.ui.element.StyledImage
+import com.waytube.app.common.ui.formatting.toAbsoluteDateString
+import com.waytube.app.common.ui.formatting.toCompactString
+import com.waytube.app.common.ui.formatting.toPluralCount
+import com.waytube.app.common.ui.menu.MenuAction
+import com.waytube.app.common.ui.menu.MoreOptionsMenu
+import com.waytube.app.common.ui.theming.AppTheme
+import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRestriction
+import kotlin.math.roundToInt
 
 @Composable
-fun VideoScreen(viewModel: VideoViewModel) {
-    VideoScreenContent(
-        videoResponseState = viewModel.videoResponseState.collectAsStateWithLifecycle()::value,
-        player = viewModel.player.collectAsStateWithLifecycle(initialValue = null)::value,
-        isPlaying = viewModel.isPlaying.collectAsStateWithLifecycle()::value,
-    )
+fun VideoScreen(
+    viewModel: VideoViewModel,
+    onNavigateToChannel: (String) -> Unit
+) {
+    when (val scene = viewModel.scene.collectAsStateWithLifecycle().value) {
+        is VideoScene.Preview -> {
+            VideoPreviewSceneContent(
+                scene = scene,
+                onShare = LocalContext.current::shareText,
+                onNavigateToChannel = onNavigateToChannel
+            )
+        }
+
+        is VideoScene.Playback -> {
+            val view = LocalView.current
+            val activity = LocalActivity.current
+
+            DisposableEffect(Unit) {
+                val insetsController = activity?.let {
+                    WindowCompat.getInsetsController(it.window, view)
+                }
+
+                insetsController?.apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+
+                onDispose {
+                    insetsController?.show(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+
+            VideoPlaybackSceneContent(scene = scene)
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VideoScreenContent(
-    videoResponseState: () -> AsyncState<VideoResponse>?,
-    player: () -> Player?,
-    isPlaying: () -> Boolean
+private fun VideoPreviewSceneContent(
+    scene: VideoScene.Preview,
+    onShare: (String) -> Unit,
+    onNavigateToChannel: (String) -> Unit
 ) {
-    MaterialTheme(colorScheme = AppColorScheme.Dark) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.scrim,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            contentWindowInsets = WindowInsets.displayCutout
-        ) { contentPadding ->
-            videoResponseState()?.let { state ->
-                AsyncContent(
-                    state = state,
-                    contentPadding = contentPadding
-                ) { (response) ->
-                    when (response) {
-                        is VideoResponse.Content -> {
-                            player()?.let { player ->
-                                AndroidView(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(contentPadding)
-                                        .then(
-                                            if (isPlaying()) Modifier.keepScreenOn() else Modifier
-                                        ),
-                                    factory = { context ->
-                                        PlayerView(context).apply {
-                                            this.player = player
-                                        }
-                                    }
+    val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    BackButton(onClick = rememberNavigationBackAction())
+                },
+                title = {
+                    Text(text = stringResource(R.string.label_video))
+                },
+                actions = {
+                    ((scene.state as? AsyncState.Loaded)?.data as? VideoPreview.Content)?.video?.let { video ->
+                        MoreOptionsMenu(
+                            actions = listOf(
+                                MenuAction(
+                                    label = stringResource(R.string.label_share),
+                                    iconPainter = painterResource(R.drawable.ic_share),
+                                    onClick = { onShare(video.url) }
+                                ),
+                                MenuAction(
+                                    label = stringResource(R.string.label_go_to_channel),
+                                    iconPainter = painterResource(R.drawable.ic_person),
+                                    onClick = { onNavigateToChannel(video.channelId) }
                                 )
+                            )
+                        )
+                    }
+                },
+                scrollBehavior = topAppBarScrollBehavior
+            )
+        }
+    ) { contentPadding ->
+        AsyncContent(
+            state = scene.state,
+            contentPadding = contentPadding
+        ) { (preview) ->
+            when (preview) {
+                is VideoPreview.Content -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(contentPadding)
+                    ) {
+                        AppTheme(darkTheme = true) {
+                            Surface(onClick = preview.play) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    StyledImage(
+                                        data = preview.video.thumbnailUrl,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9)
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_play_arrow),
+                                            contentDescription = stringResource(R.string.cd_play),
+                                            modifier = Modifier.size(36.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        is VideoResponse.Unavailable -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(contentPadding),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                StateMessage(
-                                    text = stringResource(
-                                        when (response.restriction) {
-                                            VideoRestriction.AGE -> R.string.message_video_age_restricted
-                                            VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
-                                            VideoRestriction.PRIVATE -> R.string.message_video_private
-                                            VideoRestriction.REGION -> R.string.message_video_region_blocked
-                                            null -> R.string.message_video_unavailable
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = preview.video.title,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+
+                                Text(
+                                    text = listOf(
+                                        preview.video.channelName,
+                                        when (preview.video) {
+                                            is Video.Regular -> {
+                                                preview.video.uploadedAt.toAbsoluteDateString()
+                                            }
+
+                                            is Video.Live -> {
+                                                stringResource(R.string.label_live)
+                                            }
                                         }
                                     )
+                                        .joinToString(stringResource(R.string.separator_bullet)),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Text(
+                                    listOfNotNull(
+                                        when (preview.video) {
+                                            is Video.Regular -> {
+                                                pluralStringResource(
+                                                    R.plurals.view_count,
+                                                    preview.video.viewCount.toPluralCount(),
+                                                    preview.video.viewCount.toCompactString()
+                                                )
+                                            }
+
+                                            is Video.Live -> {
+                                                pluralStringResource(
+                                                    R.plurals.watching_count,
+                                                    preview.video.watchingCount.toPluralCount(),
+                                                    preview.video.watchingCount.toCompactString()
+                                                )
+                                            }
+                                        },
+                                        preview.video.approvalRatio?.let { ratio ->
+                                            stringResource(
+                                                R.string.label_approval_percentage,
+                                                (ratio * 100).roundToInt()
+                                            )
+                                        }
+                                    )
+                                        .joinToString(stringResource(R.string.separator_bullet)),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+
+                            Text(
+                                text = AnnotatedString.fromHtml(preview.video.descriptionHtml),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
+                    }
+                }
+
+                is VideoPreview.Unavailable -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(contentPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        StateMessage(
+                            text = stringResource(
+                                when (preview.restriction) {
+                                    VideoRestriction.AGE -> R.string.message_video_age_restricted
+                                    VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
+                                    VideoRestriction.PRIVATE -> R.string.message_video_private
+                                    VideoRestriction.REGION -> R.string.message_video_region_blocked
+                                    null -> R.string.message_video_unavailable
+                                }
+                            )
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun VideoPlaybackSceneContent(scene: VideoScene.Playback) {
+    BackHandler {
+        scene.stop()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .displayCutoutPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            factory = { context ->
+                PlayerView(context).apply {
+                    this.player = scene.player
+                }
+            },
+            update = { view ->
+                view.player = scene.player
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

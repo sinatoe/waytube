@@ -23,6 +23,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toKotlinInstant
 
 class NewPipeVideoRepository(
     private val okHttpClient: OkHttpClient,
@@ -36,7 +37,28 @@ class NewPipeVideoRepository(
                     ServiceList.YouTube.streamLHFactory.getUrl(id)
                 )
 
-                VideoResponse.Content(info.toVideo())
+                val approvalRatio = try {
+                    val url = HttpUrl.Builder()
+                        .scheme("https")
+                        .host("returnyoutubedislikeapi.com")
+                        .addPathSegment("votes")
+                        .addQueryParameter("videoId", info.id)
+                        .build()
+
+                    okHttpClient.newCall(Request(url)).execute().use { response ->
+                        if (response.isSuccessful) {
+                            json
+                                .decodeFromString<RydResponse>(response.body.string())
+                                .asApprovalRatio()
+                        } else {
+                            null
+                        }
+                    }
+                } catch (_: Throwable) {
+                    null
+                }
+
+                VideoResponse.Content(info.toVideo(approvalRatio))
             } catch (e: ContentNotAvailableException) {
                 VideoResponse.Unavailable(
                     restriction = when (e) {
@@ -73,29 +95,53 @@ class NewPipeVideoRepository(
         }
 }
 
-private fun StreamInfo.toVideo(): Video {
+private fun StreamInfo.toVideo(approvalRatio: Float?): Video {
     val thumbnailUrl = thumbnails.maxBy { it.height }.url
+    val channelId = ServiceList.YouTube.channelLHFactory.getId(uploaderUrl)
 
     return when (streamType) {
         StreamType.VIDEO_STREAM -> Video.Regular(
             id = id,
+            url = url,
             title = name,
-            channelName = uploaderName,
             thumbnailUrl = thumbnailUrl,
-            dashManifestUrl = generateDashManifestUrl()
+            descriptionHtml = description.content,
+            approvalRatio = approvalRatio,
+            channelId = channelId,
+            channelName = uploaderName,
+            dashManifestUrl = generateDashManifestUrl(),
+            uploadedAt = uploadDate.instant.toKotlinInstant(),
+            viewCount = viewCount
         )
 
         StreamType.LIVE_STREAM -> Video.Live(
             id = id,
+            url = url,
             title = name,
-            channelName = uploaderName,
             thumbnailUrl = thumbnailUrl,
-            hlsPlaylistUrl = hlsUrl
+            descriptionHtml = description.content,
+            approvalRatio = approvalRatio,
+            channelId = channelId,
+            channelName = uploaderName,
+            hlsPlaylistUrl = hlsUrl,
+            watchingCount = viewCount
         )
 
         else -> error("Unknown stream type")
     }
 }
+
+@Serializable
+private data class RydResponse(
+    val likes: Long,
+    val dislikes: Long
+) {
+    fun asApprovalRatio(): Float? {
+        val total = likes + dislikes
+        return if (total == 0L) null else likes.toFloat() / total
+    }
+}
+
 
 @Serializable
 private data class SponsorBlockSkipSegment(

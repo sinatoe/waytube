@@ -1,4 +1,4 @@
-package com.waytube.app.video.service
+package com.waytube.app.playback.service
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -18,7 +18,7 @@ import org.koin.android.ext.android.inject
 import org.koin.core.parameter.parametersOf
 
 @OptIn(UnstableApi::class)
-class VideoSessionService : MediaSessionService() {
+class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
