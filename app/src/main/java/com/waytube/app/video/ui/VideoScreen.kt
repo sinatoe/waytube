@@ -18,18 +18,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -47,9 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
 import com.waytube.app.common.ui.action.shareText
-import com.waytube.app.common.ui.async.AsyncContent
-import com.waytube.app.common.ui.async.AsyncState
-import com.waytube.app.common.ui.element.BackButton
+import com.waytube.app.common.ui.async.AsyncScaffold
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.formatting.toAbsoluteDateString
@@ -111,174 +105,162 @@ private fun VideoPreviewSceneContent(
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
-    val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-
-    Scaffold(
-        modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    BackButton(onClick = onNavigateBack)
-                },
-                title = {
-                    Text(text = stringResource(R.string.label_video))
-                },
-                actions = {
-                    ((scene.state as? AsyncState.Loaded)?.data as? VideoPreview.Content)?.video?.let { video ->
-                        MoreOptionsMenu(
-                            actions = listOf(
-                                MenuAction(
-                                    label = stringResource(R.string.label_share),
-                                    iconPainter = painterResource(R.drawable.ic_share),
-                                    onClick = { onShare(video.url) }
-                                ),
-                                MenuAction(
-                                    label = stringResource(R.string.label_go_to_channel),
-                                    iconPainter = painterResource(R.drawable.ic_person),
-                                    onClick = { onNavigateToChannel(video.channelId) }
-                                )
-                            )
-                        )
-                    }
-                },
-                scrollBehavior = topAppBarScrollBehavior
-            )
-        }
-    ) { contentPadding ->
-        AsyncContent(
-            state = scene.state,
-            contentPadding = contentPadding
-        ) { (preview) ->
+    AsyncScaffold(
+        state = scene.state,
+        title = stringResource(R.string.label_video),
+        onNavigateBack = onNavigateBack,
+        actions = { preview ->
             when (preview) {
                 is VideoPreview.Content -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(contentPadding)
-                    ) {
-                        AppTheme(darkTheme = true) {
-                            Surface(onClick = preview.play) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    StyledImage(
-                                        data = preview.video.thumbnailUrl,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(16f / 9)
-                                    )
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(60.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                MaterialTheme.colorScheme.surfaceContainerHighest
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_play_arrow),
-                                            contentDescription = stringResource(R.string.cd_play),
-                                            modifier = Modifier.size(36.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = preview.video.title,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-
-                                Text(
-                                    text = listOf(
-                                        preview.video.channelName,
-                                        when (preview.video) {
-                                            is Video.Regular -> {
-                                                preview.video.uploadedAt.toAbsoluteDateString()
-                                            }
-
-                                            is Video.Live -> {
-                                                stringResource(R.string.label_live)
-                                            }
-                                        }
-                                    )
-                                        .joinToString(stringResource(R.string.separator_bullet)),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Text(
-                                    listOfNotNull(
-                                        when (preview.video) {
-                                            is Video.Regular -> {
-                                                pluralStringResource(
-                                                    R.plurals.view_count,
-                                                    preview.video.viewCount.toPluralCount(),
-                                                    preview.video.viewCount.toCompactString()
-                                                )
-                                            }
-
-                                            is Video.Live -> {
-                                                pluralStringResource(
-                                                    R.plurals.watching_count,
-                                                    preview.video.watchingCount.toPluralCount(),
-                                                    preview.video.watchingCount.toCompactString()
-                                                )
-                                            }
-                                        },
-                                        preview.video.approvalRatio?.let { ratio ->
-                                            stringResource(
-                                                R.string.label_approval_percentage,
-                                                (ratio * 100).roundToInt()
-                                            )
-                                        }
-                                    )
-                                        .joinToString(stringResource(R.string.separator_bullet)),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Text(
-                                text = AnnotatedString.fromHtml(preview.video.descriptionHtml),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-
-                is VideoPreview.Unavailable -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        StateMessage(
-                            text = stringResource(
-                                when (preview.restriction) {
-                                    VideoRestriction.AGE -> R.string.message_video_age_restricted
-                                    VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
-                                    VideoRestriction.PRIVATE -> R.string.message_video_private
-                                    VideoRestriction.REGION -> R.string.message_video_region_blocked
-                                    null -> R.string.message_video_unavailable
-                                }
+                    MoreOptionsMenu(
+                        actions = listOf(
+                            MenuAction(
+                                label = stringResource(R.string.label_share),
+                                iconPainter = painterResource(R.drawable.ic_share),
+                                onClick = { onShare(preview.video.url) }
+                            ),
+                            MenuAction(
+                                label = stringResource(R.string.label_go_to_channel),
+                                iconPainter = painterResource(R.drawable.ic_person),
+                                onClick = { onNavigateToChannel(preview.video.channelId) }
                             )
                         )
+                    )
+                }
+
+                is VideoPreview.Unavailable -> {}
+            }
+        }
+    ) { (preview), contentPadding ->
+        when (preview) {
+            is VideoPreview.Content -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(contentPadding)
+                ) {
+                    AppTheme(darkTheme = true) {
+                        Surface(onClick = preview.play) {
+                            Box(contentAlignment = Alignment.Center) {
+                                StyledImage(
+                                    data = preview.video.thumbnailUrl,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(16f / 9)
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceContainerHighest
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_play_arrow),
+                                        contentDescription = stringResource(R.string.cd_play),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
+
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = preview.video.title,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+
+                            Text(
+                                text = listOf(
+                                    preview.video.channelName,
+                                    when (preview.video) {
+                                        is Video.Regular -> {
+                                            preview.video.uploadedAt.toAbsoluteDateString()
+                                        }
+
+                                        is Video.Live -> {
+                                            stringResource(R.string.label_live)
+                                        }
+                                    }
+                                )
+                                    .joinToString(stringResource(R.string.separator_bullet)),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Text(
+                                listOfNotNull(
+                                    when (preview.video) {
+                                        is Video.Regular -> {
+                                            pluralStringResource(
+                                                R.plurals.view_count,
+                                                preview.video.viewCount.toPluralCount(),
+                                                preview.video.viewCount.toCompactString()
+                                            )
+                                        }
+
+                                        is Video.Live -> {
+                                            pluralStringResource(
+                                                R.plurals.watching_count,
+                                                preview.video.watchingCount.toPluralCount(),
+                                                preview.video.watchingCount.toCompactString()
+                                            )
+                                        }
+                                    },
+                                    preview.video.approvalRatio?.let { ratio ->
+                                        stringResource(
+                                            R.string.label_approval_percentage,
+                                            (ratio * 100).roundToInt()
+                                        )
+                                    }
+                                )
+                                    .joinToString(stringResource(R.string.separator_bullet)),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Text(
+                            text = AnnotatedString.fromHtml(preview.video.descriptionHtml),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            is VideoPreview.Unavailable -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    StateMessage(
+                        text = stringResource(
+                            when (preview.restriction) {
+                                VideoRestriction.AGE -> R.string.message_video_age_restricted
+                                VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
+                                VideoRestriction.PRIVATE -> R.string.message_video_private
+                                VideoRestriction.REGION -> R.string.message_video_region_blocked
+                                null -> R.string.message_video_unavailable
+                            }
+                        )
+                    )
                 }
             }
         }
