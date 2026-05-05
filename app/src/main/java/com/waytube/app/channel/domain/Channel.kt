@@ -5,6 +5,5 @@ data class Channel(
     val url: String,
     val name: String,
     val avatarUrl: String,
-    val bannerUrl: String?,
     val subscriberCount: Long?
 )

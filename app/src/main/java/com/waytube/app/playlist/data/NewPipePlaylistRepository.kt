@@ -41,6 +41,5 @@ private fun PlaylistInfo.toPlaylist(): Playlist = Playlist(
     url = url,
     title = name,
     channelName = uploaderName,
-    thumbnailUrl = thumbnails.maxBy { it.height }.url,
     videoCount = streamCount
 )

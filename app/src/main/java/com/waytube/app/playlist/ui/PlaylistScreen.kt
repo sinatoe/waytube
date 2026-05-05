@@ -1,14 +1,11 @@
 package com.waytube.app.playlist.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -22,7 +19,6 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -41,7 +37,6 @@ import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.element.BackButton
 import com.waytube.app.common.ui.element.PullToRefreshLayout
 import com.waytube.app.common.ui.element.StateMessage
-import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
 import com.waytube.app.common.ui.formatting.toPluralCount
@@ -146,7 +141,37 @@ private fun PlaylistScreenContent(
                             contentPadding = contentPadding
                         ) {
                             item {
-                                PlaylistScreenCard(playlist = bundle.playlist)
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = bundle.playlist.title,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+
+                                    Text(
+                                        text = bundle.playlist.channelName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.video_count,
+                                            bundle.playlist.videoCount.toPluralCount(),
+                                            bundle.playlist.videoCount.toCompactString()
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
 
                             paginatedItems(bundle.videoItems) { item ->
@@ -178,48 +203,6 @@ private fun PlaylistScreenContent(
     }
 }
 
-@Composable
-private fun PlaylistScreenCard(playlist: Playlist) {
-    Card(modifier = Modifier.padding(8.dp)) {
-        StyledImage(
-            data = playlist.thumbnailUrl,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9)
-                .clip(CardDefaults.shape)
-        )
-
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = playlist.title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Text(
-                text = playlist.channelName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                text = pluralStringResource(
-                    R.plurals.video_count,
-                    playlist.videoCount.toPluralCount(),
-                    playlist.videoCount.toCompactString()
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
 @PreviewLightDark
 @Composable
 private fun PlaylistScreenContentPreview() {
@@ -233,7 +216,6 @@ private fun PlaylistScreenContentPreview() {
                             url = "",
                             title = "Example playlist",
                             channelName = "Example channel",
-                            thumbnailUrl = "",
                             videoCount = 123
                         ),
                         videoItems = PaginatedData(

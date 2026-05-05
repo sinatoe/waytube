@@ -5,6 +5,5 @@ data class Playlist(
     val url: String,
     val title: String,
     val channelName: String,
-    val thumbnailUrl: String,
     val videoCount: Long
 )

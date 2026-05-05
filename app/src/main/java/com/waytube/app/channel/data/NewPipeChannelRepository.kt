@@ -43,6 +43,5 @@ private fun ChannelInfo.toChannel() = Channel(
     url = url,
     name = name,
     avatarUrl = avatars.maxBy { it.height }.url,
-    bannerUrl = banners.maxByOrNull { it.height }?.url,
     subscriberCount = subscriberCount.takeIf { it != -1L }
 )
