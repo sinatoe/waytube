@@ -46,7 +46,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
-import com.waytube.app.common.ui.action.rememberNavigationBackAction
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.async.AsyncState
@@ -66,6 +65,7 @@ import kotlin.math.roundToInt
 @Composable
 fun VideoScreen(
     viewModel: VideoViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     when (val scene = viewModel.scene.collectAsStateWithLifecycle().value) {
@@ -73,6 +73,7 @@ fun VideoScreen(
             VideoPreviewSceneContent(
                 scene = scene,
                 onShare = LocalContext.current::shareText,
+                onNavigateBack = onNavigateBack,
                 onNavigateToChannel = onNavigateToChannel
             )
         }
@@ -107,6 +108,7 @@ fun VideoScreen(
 private fun VideoPreviewSceneContent(
     scene: VideoScene.Preview,
     onShare: (String) -> Unit,
+    onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -116,7 +118,7 @@ private fun VideoPreviewSceneContent(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    BackButton(onClick = rememberNavigationBackAction())
+                    BackButton(onClick = onNavigateBack)
                 },
                 title = {
                     Text(text = stringResource(R.string.label_video))

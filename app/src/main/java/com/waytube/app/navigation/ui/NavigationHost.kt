@@ -7,6 +7,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -35,6 +36,21 @@ private data class ChannelRoute(val id: String) : NavKey
 @Serializable
 private data class PlaylistRoute(val id: String) : NavKey
 
+private val <T : NavKey> NavBackStack<T>.activeVideoId: String?
+    get() = (last() as? VideoRoute)?.id
+
+private fun <T : NavKey> NavBackStack<T>.push(element: T) {
+    if (element != last()) {
+        add(element)
+    }
+}
+
+private fun <T : NavKey> NavBackStack<T>.pop(element: T) {
+    if (element == last()) {
+        removeLastOrNull()
+    }
+}
+
 @Composable
 fun NavigationHost(
     viewModel: NavigationViewModel,
@@ -44,18 +60,18 @@ fun NavigationHost(
 
     LaunchedEffect(Unit) {
         viewModel.deepLinkResult.collect { result ->
-            backStack += when (result) {
-                is DeepLinkResult.Video -> VideoRoute(result.id)
-                is DeepLinkResult.Channel -> ChannelRoute(result.id)
-                is DeepLinkResult.Playlist -> PlaylistRoute(result.id)
-            }
+            backStack.push(
+                when (result) {
+                    is DeepLinkResult.Video -> VideoRoute(result.id)
+                    is DeepLinkResult.Channel -> ChannelRoute(result.id)
+                    is DeepLinkResult.Playlist -> PlaylistRoute(result.id)
+                }
+            )
         }
     }
 
-    LaunchedEffect(backStack.last()) {
-        playbackManager.setActiveId(
-            (backStack.last() as? VideoRoute)?.id
-        )
+    LaunchedEffect(backStack.activeVideoId) {
+        playbackManager.setActiveId(backStack.activeVideoId)
     }
 
     Surface {
@@ -79,43 +95,46 @@ fun NavigationHost(
                     SearchScreen(
                         viewModel = koinViewModel(),
                         onNavigateToVideo = { id ->
-                            backStack += VideoRoute(id)
+                            backStack.push(VideoRoute(id))
                         },
                         onNavigateToChannel = { id ->
-                            backStack += ChannelRoute(id)
+                            backStack.push(ChannelRoute(id))
                         },
                         onNavigateToPlaylist = { id ->
-                            backStack += PlaylistRoute(id)
+                            backStack.push(PlaylistRoute(id))
                         }
                     )
                 }
 
-                entry<VideoRoute> { (id) ->
+                entry<VideoRoute> { route ->
                     VideoScreen(
-                        viewModel = koinViewModel { parametersOf(id) },
+                        viewModel = koinViewModel { parametersOf(route.id) },
+                        onNavigateBack = { backStack.pop(route) },
                         onNavigateToChannel = { id ->
-                            backStack += ChannelRoute(id)
+                            backStack.push(ChannelRoute(id))
                         }
                     )
                 }
 
-                entry<ChannelRoute> { (id) ->
+                entry<ChannelRoute> { route ->
                     ChannelScreen(
-                        viewModel = koinViewModel { parametersOf(id) },
+                        viewModel = koinViewModel { parametersOf(route.id) },
+                        onNavigateBack = { backStack.pop(route) },
                         onNavigateToVideo = { id ->
-                            backStack += VideoRoute(id)
+                            backStack.push(VideoRoute(id))
                         }
                     )
                 }
 
-                entry<PlaylistRoute> { (id) ->
+                entry<PlaylistRoute> { route ->
                     PlaylistScreen(
-                        viewModel = koinViewModel { parametersOf(id) },
+                        viewModel = koinViewModel { parametersOf(route.id) },
+                        onNavigateBack = { backStack.pop(route) },
                         onNavigateToVideo = { id ->
-                            backStack += VideoRoute(id)
+                            backStack.push(VideoRoute(id))
                         },
                         onNavigateToChannel = { id ->
-                            backStack += ChannelRoute(id)
+                            backStack.push(ChannelRoute(id))
                         }
                     )
                 }

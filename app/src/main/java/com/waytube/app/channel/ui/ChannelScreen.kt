@@ -36,7 +36,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
-import com.waytube.app.common.ui.action.rememberNavigationBackAction
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncContent
 import com.waytube.app.common.ui.async.AsyncState
@@ -61,11 +60,13 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun ChannelScreen(
     viewModel: ChannelViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit
 ) {
     ChannelScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
+        onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo
     )
 }
@@ -75,6 +76,7 @@ fun ChannelScreen(
 private fun ChannelScreenContent(
     bundleState: () -> AsyncState<ChannelBundle>,
     onShare: (String) -> Unit,
+    onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -99,7 +101,7 @@ private fun ChannelScreenContent(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    BackButton(onClick = rememberNavigationBackAction())
+                    BackButton(onClick = onNavigateBack)
                 },
                 title = {
                     Text(text = stringResource(R.string.label_channel))
@@ -246,6 +248,7 @@ private fun ChannelScreenContentPreview() {
                 )
             },
             onShare = {},
+            onNavigateBack = {},
             onNavigateToVideo = {}
         )
     }

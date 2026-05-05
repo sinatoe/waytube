@@ -55,12 +55,14 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun PlaylistScreen(
     viewModel: PlaylistViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle()::value,
         onShare = LocalContext.current::shareText,
+        onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo,
         onNavigateToChannel = onNavigateToChannel
     )
@@ -71,6 +73,7 @@ fun PlaylistScreen(
 private fun PlaylistScreenContent(
     bundleState: () -> AsyncState<PlaylistBundle>,
     onShare: (String) -> Unit,
+    onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
@@ -103,7 +106,7 @@ private fun PlaylistScreenContent(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    BackButton(onClick = rememberNavigationBackAction())
+                    BackButton(onClick = onNavigateBack)
                 },
                 title = {
                     Text(text = stringResource(R.string.label_playlist))
@@ -240,6 +243,7 @@ private fun PlaylistScreenContentPreview() {
                 )
             },
             onShare = {},
+            onNavigateBack = {},
             onNavigateToVideo = {},
             onNavigateToChannel = {}
         )
