@@ -29,7 +29,6 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncScaffold
 import com.waytube.app.common.ui.async.AsyncState
-import com.waytube.app.common.ui.element.PullToRefreshLayout
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
@@ -114,59 +113,53 @@ private fun PlaylistScreenContent(
                 is PlaylistBundle.Unavailable -> {}
             }
         }
-    ) { state, contentPadding ->
-        when (val bundle = state.data) {
+    ) { bundle, contentPadding ->
+        when (bundle) {
             is PlaylistBundle.Content -> {
-                PullToRefreshLayout(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = state.refresh,
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = contentPadding
-                    ) {
-                        item {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = bundle.playlist.title,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
+                    item {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = bundle.playlist.title,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleLarge
+                            )
 
-                                Text(
-                                    text = bundle.playlist.channelName,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Text(
+                                text = bundle.playlist.channelName,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.video_count,
-                                        bundle.playlist.videoCount.toPluralCount(),
-                                        bundle.playlist.videoCount.toCompactString()
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        paginatedItems(bundle.videoItems) { item ->
-                            VideoItemCard(
-                                item = item,
-                                onClick = { onNavigateToVideo(item.id) },
-                                onLongClick = { selectedItem = item }
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.video_count,
+                                    bundle.playlist.videoCount.toPluralCount(),
+                                    bundle.playlist.videoCount.toCompactString()
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+
+                    paginatedItems(bundle.videoItems) { item ->
+                        VideoItemCard(
+                            item = item,
+                            onClick = { onNavigateToVideo(item.id) },
+                            onLongClick = { selectedItem = item }
+                        )
                     }
                 }
             }

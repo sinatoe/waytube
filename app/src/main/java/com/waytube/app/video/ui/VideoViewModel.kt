@@ -69,7 +69,11 @@ class VideoViewModel(
         )
 
     val scene = previewState
-        .map { ((it as? AsyncState.Loaded)?.data as? VideoPreview.Content)?.video }
+        .map { state ->
+            (state as? AsyncState.Loaded)?.let { (preview, isRefreshing) ->
+                (preview as? VideoPreview.Content)?.video?.takeIf { !isRefreshing }
+            }
+        }
         .distinctUntilChanged()
         .flatMapLatest { video ->
             isPlaybackRequested

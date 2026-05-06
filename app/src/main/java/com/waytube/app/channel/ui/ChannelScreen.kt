@@ -35,7 +35,6 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncScaffold
 import com.waytube.app.common.ui.async.AsyncState
-import com.waytube.app.common.ui.element.PullToRefreshLayout
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.element.VideoItemCard
@@ -110,70 +109,64 @@ private fun ChannelScreenContent(
                 ChannelBundle.Unavailable -> {}
             }
         }
-    ) { state, contentPadding ->
-        when (val bundle = state.data) {
+    ) { bundle, contentPadding ->
+        when (bundle) {
             is ChannelBundle.Content -> {
-                PullToRefreshLayout(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = state.refresh,
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = contentPadding
-                    ) {
-                        item {
-                            Column(
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            StyledImage(
+                                data = bundle.channel.avatarUrl,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                            )
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                StyledImage(
-                                    data = bundle.channel.avatarUrl,
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(CircleShape)
+                                Text(
+                                    text = bundle.channel.name,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.titleLarge
                                 )
 
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
+                                bundle.channel.subscriberCount?.let { subscriberCount ->
                                     Text(
-                                        text = bundle.channel.name,
+                                        text = pluralStringResource(
+                                            R.plurals.subscriber_count,
+                                            subscriberCount.toPluralCount(),
+                                            subscriberCount.toCompactString()
+                                        ),
                                         textAlign = TextAlign.Center,
-                                        maxLines = 2,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.titleLarge
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-
-                                    bundle.channel.subscriberCount?.let { subscriberCount ->
-                                        Text(
-                                            text = pluralStringResource(
-                                                R.plurals.subscriber_count,
-                                                subscriberCount.toPluralCount(),
-                                                subscriberCount.toCompactString()
-                                            ),
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
                                 }
                             }
                         }
+                    }
 
-                        paginatedItems(bundle.videoItems) { item ->
-                            VideoItemCard(
-                                item = item,
-                                onClick = { onNavigateToVideo(item.id) },
-                                onLongClick = { selectedItem = item }
-                            )
-                        }
+                    paginatedItems(bundle.videoItems) { item ->
+                        VideoItemCard(
+                            item = item,
+                            onClick = { onNavigateToVideo(item.id) },
+                            onLongClick = { selectedItem = item }
+                        )
                     }
                 }
             }

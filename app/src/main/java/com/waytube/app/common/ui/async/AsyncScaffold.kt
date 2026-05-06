@@ -10,6 +10,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +30,7 @@ fun <T> AsyncScaffold(
     title: String,
     onNavigateBack: () -> Unit,
     actions: @Composable (T) -> Unit = {},
-    content: @Composable (AsyncState.Loaded<T>, PaddingValues) -> Unit
+    content: @Composable (T, PaddingValues) -> Unit
 ) {
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -85,7 +88,24 @@ fun <T> AsyncScaffold(
             }
 
             is AsyncState.Loaded -> {
-                content(state, contentPadding)
+                val pullToRefreshState = rememberPullToRefreshState()
+
+                PullToRefreshBox(
+                    state = pullToRefreshState,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = state.refresh,
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(contentPadding)
+                        )
+                    }
+                ) {
+                    content(state.data, contentPadding)
+                }
             }
         }
     }

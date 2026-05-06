@@ -131,7 +131,7 @@ private fun VideoPreviewSceneContent(
                 is VideoPreview.Unavailable -> {}
             }
         }
-    ) { (preview), contentPadding ->
+    ) { preview, contentPadding ->
         when (preview) {
             is VideoPreview.Content -> {
                 Column(
