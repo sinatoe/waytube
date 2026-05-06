@@ -55,7 +55,7 @@ import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.menu.ItemMenuSheet
 import com.waytube.app.common.ui.menu.MenuAction
 import com.waytube.app.common.ui.pagination.PaginatedData
-import com.waytube.app.common.ui.pagination.paginatedItems
+import com.waytube.app.common.ui.pagination.paginatedDataItems
 import com.waytube.app.common.ui.theming.AppTheme
 import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
@@ -280,7 +280,7 @@ private fun SearchScreenContent(
                     }
                 }
 
-                paginatedItems(results) { result ->
+                paginatedDataItems(results) { result ->
                     when (result) {
                         is SearchResult.Video -> {
                             VideoItemCard(

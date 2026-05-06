@@ -25,7 +25,7 @@ import com.waytube.app.common.ui.element.StateMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> AsyncScaffold(
+fun <T> AsyncStateScaffold(
     state: AsyncState<T>,
     title: String,
     onNavigateBack: () -> Unit,

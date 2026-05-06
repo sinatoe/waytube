@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,7 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
 import com.waytube.app.common.ui.action.shareText
-import com.waytube.app.common.ui.async.AsyncScaffold
+import com.waytube.app.common.ui.async.AsyncStateScaffold
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.formatting.toAbsoluteDateString
@@ -101,7 +100,6 @@ fun VideoScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoPreviewSceneContent(
     scene: VideoScene.Preview,
@@ -110,7 +108,7 @@ private fun VideoPreviewSceneContent(
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
-    AsyncScaffold(
+    AsyncStateScaffold(
         state = scene.state,
         title = stringResource(R.string.label_video),
         onNavigateBack = onNavigateBack,

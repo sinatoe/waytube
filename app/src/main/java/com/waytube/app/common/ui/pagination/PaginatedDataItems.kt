@@ -16,7 +16,7 @@ import com.waytube.app.R
 import com.waytube.app.common.domain.Identifiable
 import com.waytube.app.common.ui.element.StateMessage
 
-fun <T : Identifiable> LazyListScope.paginatedItems(
+fun <T : Identifiable> LazyListScope.paginatedDataItems(
     data: PaginatedData<T>,
     itemContent: @Composable (T) -> Unit
 ) {

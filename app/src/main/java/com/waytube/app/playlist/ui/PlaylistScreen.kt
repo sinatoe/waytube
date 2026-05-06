@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +26,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
-import com.waytube.app.common.ui.async.AsyncScaffold
 import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.async.AsyncStateScaffold
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
@@ -37,7 +36,7 @@ import com.waytube.app.common.ui.menu.ItemMenuSheet
 import com.waytube.app.common.ui.menu.MenuAction
 import com.waytube.app.common.ui.menu.MoreOptionsMenu
 import com.waytube.app.common.ui.pagination.PaginatedData
-import com.waytube.app.common.ui.pagination.paginatedItems
+import com.waytube.app.common.ui.pagination.paginatedDataItems
 import com.waytube.app.common.ui.theming.AppTheme
 import com.waytube.app.playlist.domain.Playlist
 import kotlin.time.Clock
@@ -61,7 +60,6 @@ fun PlaylistScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistScreenContent(
     bundleState: AsyncState<PlaylistBundle>,
@@ -92,7 +90,7 @@ private fun PlaylistScreenContent(
         )
     }
 
-    AsyncScaffold(
+    AsyncStateScaffold(
         state = bundleState,
         title = stringResource(R.string.label_playlist),
         onNavigateBack = onNavigateBack,
@@ -154,7 +152,7 @@ private fun PlaylistScreenContent(
                         }
                     }
 
-                    paginatedItems(bundle.videoItems) { item ->
+                    paginatedDataItems(bundle.videoItems) { item ->
                         VideoItemCard(
                             item = item,
                             onClick = { onNavigateToVideo(item.id) },

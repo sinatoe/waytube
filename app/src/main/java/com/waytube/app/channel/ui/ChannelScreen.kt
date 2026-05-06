@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,8 +32,8 @@ import com.waytube.app.R
 import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
-import com.waytube.app.common.ui.async.AsyncScaffold
 import com.waytube.app.common.ui.async.AsyncState
+import com.waytube.app.common.ui.async.AsyncStateScaffold
 import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.element.VideoItemCard
@@ -44,7 +43,7 @@ import com.waytube.app.common.ui.menu.ItemMenuSheet
 import com.waytube.app.common.ui.menu.MenuAction
 import com.waytube.app.common.ui.menu.MoreOptionsMenu
 import com.waytube.app.common.ui.pagination.PaginatedData
-import com.waytube.app.common.ui.pagination.paginatedItems
+import com.waytube.app.common.ui.pagination.paginatedDataItems
 import com.waytube.app.common.ui.theming.AppTheme
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -65,7 +64,6 @@ fun ChannelScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChannelScreenContent(
     bundleState: AsyncState<ChannelBundle>,
@@ -88,7 +86,7 @@ private fun ChannelScreenContent(
         )
     }
 
-    AsyncScaffold(
+    AsyncStateScaffold(
         state = bundleState,
         title = stringResource(R.string.label_channel),
         onNavigateBack = onNavigateBack,
@@ -161,7 +159,7 @@ private fun ChannelScreenContent(
                         }
                     }
 
-                    paginatedItems(bundle.videoItems) { item ->
+                    paginatedDataItems(bundle.videoItems) { item ->
                         VideoItemCard(
                             item = item,
                             onClick = { onNavigateToVideo(item.id) },
