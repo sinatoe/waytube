@@ -33,6 +33,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,7 +45,6 @@ import androidx.media3.ui.PlayerView
 import com.waytube.app.R
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncStateScaffold
-import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.formatting.toAbsoluteDateString
 import com.waytube.app.common.ui.formatting.toCompactString
@@ -250,10 +250,11 @@ private fun VideoPreviewSceneContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(contentPadding),
+                        .padding(contentPadding)
+                        .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    StateMessage(
+                    Text(
                         text = stringResource(
                             when (preview.restriction) {
                                 VideoRestriction.AGE -> R.string.message_video_age_restricted
@@ -262,7 +263,10 @@ private fun VideoPreviewSceneContent(
                                 VideoRestriction.REGION -> R.string.message_video_region_blocked
                                 null -> R.string.message_video_unavailable
                             }
-                        )
+                        ),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

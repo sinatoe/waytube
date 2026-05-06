@@ -1,11 +1,14 @@
 package com.waytube.app.common.ui.async
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -18,10 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.ui.element.BackButton
-import com.waytube.app.common.ui.element.StateMessage
+import com.waytube.app.common.ui.element.RetryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,13 +71,15 @@ fun <T> AsyncStateScaffold(
             }
 
             is AsyncState.Error -> {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(contentPadding),
-                    contentAlignment = Alignment.Center
+                        .padding(contentPadding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    StateMessage(
+                    Text(
                         text = stringResource(
                             when (state.error) {
                                 FetchError.NETWORK -> R.string.message_content_network_error
@@ -82,8 +89,11 @@ fun <T> AsyncStateScaffold(
                                 FetchError.UNKNOWN -> R.string.message_content_load_error
                             }
                         ),
-                        onRetry = state.retry
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium
                     )
+
+                    RetryButton(onClick = state.retry)
                 }
             }
 

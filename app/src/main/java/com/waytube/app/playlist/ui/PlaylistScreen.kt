@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -28,7 +29,6 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.AsyncStateScaffold
-import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
 import com.waytube.app.common.ui.formatting.toPluralCount
@@ -166,11 +166,15 @@ private fun PlaylistScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(contentPadding),
+                        .padding(contentPadding)
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    StateMessage(
-                        text = stringResource(R.string.message_playlist_unavailable)
+                    Text(
+                        text = stringResource(R.string.message_playlist_unavailable),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

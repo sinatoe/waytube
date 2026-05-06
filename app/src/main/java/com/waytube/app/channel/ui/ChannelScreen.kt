@@ -34,7 +34,6 @@ import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.action.shareText
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.AsyncStateScaffold
-import com.waytube.app.common.ui.element.StateMessage
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.element.VideoItemCard
 import com.waytube.app.common.ui.formatting.toCompactString
@@ -173,11 +172,15 @@ private fun ChannelScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(contentPadding),
+                        .padding(contentPadding)
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    StateMessage(
-                        text = stringResource(R.string.message_channel_unavailable)
+                    Text(
+                        text = stringResource(R.string.message_channel_unavailable),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
