@@ -2,6 +2,7 @@ package com.waytube.app.video.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,10 +63,13 @@ fun VideoScreen(
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     when (val scene = viewModel.scene.collectAsStateWithLifecycle().value) {
         is VideoScene.Preview -> {
             VideoPreviewSceneContent(
                 scene = scene,
+                scrollState = scrollState,
                 onShare = LocalContext.current::shareText,
                 onNavigateBack = onNavigateBack,
                 onNavigateToChannel = onNavigateToChannel
@@ -101,6 +105,7 @@ fun VideoScreen(
 @Composable
 private fun VideoPreviewSceneContent(
     scene: VideoScene.Preview,
+    scrollState: ScrollState,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
@@ -137,7 +142,7 @@ private fun VideoPreviewSceneContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .padding(contentPadding)
                 ) {
                     AppTheme(darkTheme = true) {
