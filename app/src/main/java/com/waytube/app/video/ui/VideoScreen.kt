@@ -158,7 +158,7 @@ private fun VideoPreviewSceneContent(
                                         .size(60.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            MaterialTheme.colorScheme.surfaceContainerHighest
+                                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {

@@ -1,6 +1,5 @@
 package com.waytube.app.common.ui.element
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,9 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
-import com.waytube.app.common.ui.theming.AppColorScheme
+import com.waytube.app.common.ui.theming.AppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemCardBase(
     onClick: () -> Unit,
@@ -50,12 +47,25 @@ fun ItemCardBase(
                 imageContent()
 
                 imageOverlayText?.let { text ->
-                    ItemCardImageOverlay(
-                        text = text,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(4.dp)
-                    )
+                    AppTheme(darkTheme = true) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(4.dp)
+                                .clip(MaterialTheme.shapes.extraSmall),
+                            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ) {
+                            Text(
+                                text = text,
+                                modifier = Modifier.padding(4.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    lineHeightStyle = LineHeightStyle.Default
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
 
@@ -64,25 +74,5 @@ fun ItemCardBase(
                 content = detailsContent
             )
         }
-    }
-}
-
-@Composable
-private fun ItemCardImageOverlay(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    MaterialTheme(colorScheme = AppColorScheme.Dark) {
-        Text(
-            text = text,
-            modifier = modifier
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
-                .padding(3.dp),
-            style = MaterialTheme.typography.labelSmall.copy(
-                lineHeightStyle = LineHeightStyle.Default
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
