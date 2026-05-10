@@ -26,16 +26,25 @@ class PlaylistViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    private val videoItemsLoadSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
     val bundleState = asyncStateFlow(bundleRefreshSignal) { repository.getPlaylist(id) }
         .flatMapLoaded { response ->
             when (response) {
                 is PlaylistResponse.Content -> {
-                    paginatedDataFlow(response.videoItemsPage).map { videoItems ->
-                        PlaylistBundle.Content(
-                            playlist = response.playlist,
-                            videoItems = videoItems
-                        )
-                    }
+                    paginatedDataFlow(
+                        page = response.videoItemsPage,
+                        loadSignal = videoItemsLoadSignal
+                    )
+                        .map { videoItems ->
+                            PlaylistBundle.Content(
+                                playlist = response.playlist,
+                                videoItems = videoItems
+                            )
+                        }
                 }
 
                 PlaylistResponse.Unavailable -> flowOf(PlaylistBundle.Unavailable)
@@ -49,5 +58,9 @@ class PlaylistViewModel(
 
     fun refreshBundle() {
         bundleRefreshSignal.tryEmit(Unit)
+    }
+
+    fun loadVideoItems() {
+        videoItemsLoadSignal.tryEmit(Unit)
     }
 }

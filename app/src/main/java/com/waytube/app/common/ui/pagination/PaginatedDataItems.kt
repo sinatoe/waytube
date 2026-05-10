@@ -23,6 +23,7 @@ import com.waytube.app.common.ui.element.RetryButton
 
 fun <T : Identifiable> LazyListScope.paginatedDataItems(
     data: PaginatedData<T>,
+    onLoad: () -> Unit,
     itemContent: @Composable (T) -> Unit
 ) {
     items(
@@ -33,11 +34,11 @@ fun <T : Identifiable> LazyListScope.paginatedDataItems(
     }
 
     when (val state = data.state) {
-        is PaginatedData.State.HasMore -> {
+        PaginatedData.State.Idle, PaginatedData.State.Loading -> {
             item {
-                if (state is PaginatedData.State.HasMore.Idle) {
+                if (state is PaginatedData.State.Idle) {
                     LaunchedEffect(Unit) {
-                        state.load()
+                        onLoad()
                     }
                 }
 
@@ -70,12 +71,12 @@ fun <T : Identifiable> LazyListScope.paginatedDataItems(
                         style = MaterialTheme.typography.titleMedium
                     )
 
-                    RetryButton(onClick = state.retry)
+                    RetryButton(onClick = onLoad)
                 }
             }
         }
 
-        is PaginatedData.State.Done -> {
+        PaginatedData.State.Done -> {
             if (data.items.isEmpty()) {
                 item {
                     Text(

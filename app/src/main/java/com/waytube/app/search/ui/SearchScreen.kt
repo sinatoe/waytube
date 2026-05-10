@@ -85,6 +85,7 @@ fun SearchScreen(
         results = viewModel.results.collectAsStateWithLifecycle()::value,
         onTrySubmit = viewModel::trySubmit,
         onFilterClick = viewModel::toggleFilter,
+        onLoadResults = viewModel::loadResults,
         onShare = LocalContext.current::shareText,
         onNavigateToVideo = onNavigateToVideo,
         onNavigateToChannel = onNavigateToChannel,
@@ -101,6 +102,7 @@ private fun SearchScreenContent(
     results: () -> PaginatedData<SearchResult>?,
     onTrySubmit: (String) -> Boolean,
     onFilterClick: (SearchFilter) -> Unit,
+    onLoadResults: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit,
@@ -280,7 +282,10 @@ private fun SearchScreenContent(
                     }
                 }
 
-                paginatedDataItems(results) { result ->
+                paginatedDataItems(
+                    data = results,
+                    onLoad = onLoadResults
+                ) { result ->
                     when (result) {
                         is SearchResult.Video -> {
                             VideoItemCard(
@@ -347,6 +352,7 @@ private fun SearchScreenPreview() {
             },
             onTrySubmit = { true },
             onFilterClick = {},
+            onLoadResults = {},
             onShare = {},
             onNavigateToVideo = {},
             onNavigateToChannel = {},

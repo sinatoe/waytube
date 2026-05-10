@@ -26,13 +26,22 @@ class ChannelViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    private val videoItemsLoadSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
     val bundleState = asyncStateFlow(bundleRefreshSignal) { repository.getChannel(id) }
         .flatMapLoaded { response ->
             when (response) {
                 is ChannelResponse.Content -> {
-                    paginatedDataFlow(response.videoItemsPage).map { videoItems ->
-                        ChannelBundle.Content(response.channel, videoItems)
-                    }
+                    paginatedDataFlow(
+                        page = response.videoItemsPage,
+                        loadSignal = videoItemsLoadSignal
+                    )
+                        .map { videoItems ->
+                            ChannelBundle.Content(response.channel, videoItems)
+                        }
                 }
 
                 ChannelResponse.Unavailable -> flowOf(ChannelBundle.Unavailable)
@@ -46,5 +55,9 @@ class ChannelViewModel(
 
     fun refreshBundle() {
         bundleRefreshSignal.tryEmit(Unit)
+    }
+
+    fun loadVideoItems() {
+        videoItemsLoadSignal.tryEmit(Unit)
     }
 }

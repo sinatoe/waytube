@@ -58,6 +58,7 @@ fun ChannelScreen(
     ChannelScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
         onRefreshBundle = viewModel::refreshBundle,
+        onLoadVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo
@@ -68,6 +69,7 @@ fun ChannelScreen(
 private fun ChannelScreenContent(
     bundleState: AsyncState<ChannelBundle>,
     onRefreshBundle: () -> Unit,
+    onLoadVideoItems: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit
@@ -161,7 +163,10 @@ private fun ChannelScreenContent(
                         }
                     }
 
-                    paginatedDataItems(bundle.videoItems) { item ->
+                    paginatedDataItems(
+                        data = bundle.videoItems,
+                        onLoad = onLoadVideoItems
+                    ) { item ->
                         VideoItemCard(
                             item = item,
                             onClick = { onNavigateToVideo(item.id) },
@@ -225,6 +230,7 @@ private fun ChannelScreenContentPreview() {
                 isRefreshing = false
             ),
             onRefreshBundle = {},
+            onLoadVideoItems = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {}

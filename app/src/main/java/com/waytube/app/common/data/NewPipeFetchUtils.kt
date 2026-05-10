@@ -51,7 +51,9 @@ fun <T : InfoItem, R : Identifiable> ListExtractor<T>.paginate(
                     items = emptyList(),
                     next = null
                 )
-            } else throw e
+            } else {
+                throw e
+            }
         }
 
 

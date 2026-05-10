@@ -11,6 +11,8 @@ import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.debounce
@@ -44,6 +46,11 @@ class SearchViewModel(
     private val searchState = savedStateHandle.getMutableStateFlow<SearchState?>(
         key = "search_state",
         initialValue = null
+    )
+
+    private val resultsLoadSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
     val suggestions = suggestionsQuery
@@ -88,7 +95,7 @@ class SearchViewModel(
     val results = searchState
         .filterNotNull()
         .flatMapLatest { (query, filter) ->
-            paginatedDataFlow { repository.getResults(query, filter) }
+            paginatedDataFlow(resultsLoadSignal) { repository.getResults(query, filter) }
         }
         .stateIn(
             scope = viewModelScope,
@@ -125,6 +132,10 @@ class SearchViewModel(
         searchState.update { state ->
             state?.copy(filter = filter.takeIf { state.filter != it })
         }
+    }
+
+    fun loadResults() {
+        resultsLoadSignal.tryEmit(Unit)
     }
 
     companion object {
