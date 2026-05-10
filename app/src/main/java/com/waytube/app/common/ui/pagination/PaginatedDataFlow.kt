@@ -25,8 +25,8 @@ private sealed interface FetchEvent<out T> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T> paginatedDataFlow(
-    page: Page<T>,
-    loadSignal: Flow<Unit>
+    loadSignal: Flow<Unit>,
+    page: Page<T>
 ): Flow<PaginatedData<T>> {
     if (page.next == null) {
         return flowOf(

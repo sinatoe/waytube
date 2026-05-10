@@ -6,7 +6,6 @@ import com.waytube.app.channel.domain.ChannelRepository
 import com.waytube.app.channel.domain.ChannelResponse
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
-import com.waytube.app.common.ui.async.flatMapLoaded
 import com.waytube.app.common.ui.pagination.paginatedDataFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -31,22 +30,27 @@ class ChannelViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    val bundleState = asyncStateFlow(bundleRefreshSignal) { repository.getChannel(id) }
-        .flatMapLoaded { response ->
-            when (response) {
-                is ChannelResponse.Content -> {
-                    paginatedDataFlow(
-                        page = response.videoItemsPage,
-                        loadSignal = videoItemsLoadSignal
-                    )
-                        .map { videoItems ->
-                            ChannelBundle.Content(response.channel, videoItems)
-                        }
-                }
-
-                ChannelResponse.Unavailable -> flowOf(ChannelBundle.Unavailable)
+    val bundleState = asyncStateFlow(
+        refreshSignal = bundleRefreshSignal,
+        fetch = { repository.getChannel(id) }
+    ) { response ->
+        when (response) {
+            is ChannelResponse.Content -> {
+                paginatedDataFlow(
+                    loadSignal = videoItemsLoadSignal,
+                    page = response.videoItemsPage
+                )
+                    .map { videoItems ->
+                        ChannelBundle.Content(
+                            channel = response.channel,
+                            videoItems = videoItems
+                        )
+                    }
             }
+
+            ChannelResponse.Unavailable -> flowOf(ChannelBundle.Unavailable)
         }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
