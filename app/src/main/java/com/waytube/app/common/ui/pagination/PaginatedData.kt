@@ -7,16 +7,11 @@ data class PaginatedData<T>(
     val state: State
 ) {
     sealed interface State {
-        sealed interface HasMore : State {
-            data object Loading : HasMore
+        data object Idle : State
 
-            data class Idle(val load: () -> Unit) : HasMore
-        }
+        data object Loading : State
 
-        data class Error(
-            val error: FetchError,
-            val retry: () -> Unit
-        ) : State
+        data class Error(val error: FetchError) : State
 
         data object Done : State
     }

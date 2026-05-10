@@ -53,6 +53,7 @@ import com.waytube.app.common.ui.menu.MenuAction
 import com.waytube.app.common.ui.menu.MoreOptionsMenu
 import com.waytube.app.common.ui.theming.AppTheme
 import com.waytube.app.video.domain.Video
+import com.waytube.app.video.domain.VideoResponse
 import com.waytube.app.video.domain.VideoRestriction
 import kotlin.math.roundToInt
 
@@ -68,7 +69,9 @@ fun VideoScreen(
         is VideoScene.Preview -> {
             VideoPreviewSceneContent(
                 scene = scene,
+                onRefreshResponse = viewModel::refreshResponse,
                 scrollState = scrollState,
+                onPlay = viewModel::play,
                 onShare = LocalContext.current::shareText,
                 onNavigateBack = onNavigateBack,
                 onNavigateToChannel = onNavigateToChannel
@@ -95,7 +98,10 @@ fun VideoScreen(
                 }
             }
 
-            VideoPlaybackSceneContent(scene = scene)
+            VideoPlaybackSceneContent(
+                scene = scene,
+                onStop = viewModel::stop
+            )
         }
     }
 }
@@ -103,18 +109,21 @@ fun VideoScreen(
 @Composable
 private fun VideoPreviewSceneContent(
     scene: VideoScene.Preview,
+    onRefreshResponse: () -> Unit,
     scrollState: ScrollState,
+    onPlay: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     AsyncStateScaffold(
-        state = scene.state,
+        state = scene.responseState,
+        onRefresh = onRefreshResponse,
         title = stringResource(R.string.label_video),
         onNavigateBack = onNavigateBack,
         actions = { preview ->
             when (preview) {
-                is VideoPreview.Content -> {
+                is VideoResponse.Content -> {
                     MoreOptionsMenu(
                         actions = listOf(
                             MenuAction(
@@ -131,12 +140,12 @@ private fun VideoPreviewSceneContent(
                     )
                 }
 
-                is VideoPreview.Unavailable -> {}
+                is VideoResponse.Unavailable -> {}
             }
         }
-    ) { preview, contentPadding ->
-        when (preview) {
-            is VideoPreview.Content -> {
+    ) { response, contentPadding ->
+        when (response) {
+            is VideoResponse.Content -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -144,10 +153,10 @@ private fun VideoPreviewSceneContent(
                         .padding(contentPadding)
                 ) {
                     AppTheme(darkTheme = true) {
-                        Surface(onClick = preview.play) {
+                        Surface(onClick = onPlay) {
                             Box(contentAlignment = Alignment.Center) {
                                 StyledImage(
-                                    data = preview.video.thumbnailUrl,
+                                    data = response.video.thumbnailUrl,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(16f / 9)
@@ -178,7 +187,7 @@ private fun VideoPreviewSceneContent(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = preview.video.title,
+                                text = response.video.title,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleLarge
@@ -186,10 +195,10 @@ private fun VideoPreviewSceneContent(
 
                             Text(
                                 text = listOf(
-                                    preview.video.channelName,
-                                    when (preview.video) {
+                                    response.video.channelName,
+                                    when (response.video) {
                                         is Video.Regular -> {
-                                            preview.video.uploadedAt.toAbsoluteDateString()
+                                            response.video.uploadedAt.toAbsoluteDateString()
                                         }
 
                                         is Video.Live -> {
@@ -206,24 +215,24 @@ private fun VideoPreviewSceneContent(
 
                             Text(
                                 listOfNotNull(
-                                    when (preview.video) {
+                                    when (response.video) {
                                         is Video.Regular -> {
                                             pluralStringResource(
                                                 R.plurals.view_count,
-                                                preview.video.viewCount.toPluralCount(),
-                                                preview.video.viewCount.toCompactString()
+                                                response.video.viewCount.toPluralCount(),
+                                                response.video.viewCount.toCompactString()
                                             )
                                         }
 
                                         is Video.Live -> {
                                             pluralStringResource(
                                                 R.plurals.watching_count,
-                                                preview.video.watchingCount.toPluralCount(),
-                                                preview.video.watchingCount.toCompactString()
+                                                response.video.watchingCount.toPluralCount(),
+                                                response.video.watchingCount.toCompactString()
                                             )
                                         }
                                     },
-                                    preview.video.approvalRatio?.let { ratio ->
+                                    response.video.approvalRatio?.let { ratio ->
                                         stringResource(
                                             R.string.label_approval_percentage,
                                             (ratio * 100).roundToInt()
@@ -239,14 +248,14 @@ private fun VideoPreviewSceneContent(
                         }
 
                         Text(
-                            text = AnnotatedString.fromHtml(preview.video.descriptionHtml),
+                            text = AnnotatedString.fromHtml(response.video.descriptionHtml),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            is VideoPreview.Unavailable -> {
+            is VideoResponse.Unavailable -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -256,7 +265,7 @@ private fun VideoPreviewSceneContent(
                 ) {
                     Text(
                         text = stringResource(
-                            when (preview.restriction) {
+                            when (response.restriction) {
                                 VideoRestriction.AGE -> R.string.message_video_age_restricted
                                 VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
                                 VideoRestriction.PRIVATE -> R.string.message_video_private
@@ -275,9 +284,12 @@ private fun VideoPreviewSceneContent(
 }
 
 @Composable
-private fun VideoPlaybackSceneContent(scene: VideoScene.Playback) {
+private fun VideoPlaybackSceneContent(
+    scene: VideoScene.Playback,
+    onStop: () -> Unit
+) {
     BackHandler {
-        scene.stop()
+        onStop()
     }
 
     Box(

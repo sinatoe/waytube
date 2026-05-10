@@ -53,6 +53,8 @@ fun PlaylistScreen(
 ) {
     PlaylistScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
+        onRefreshBundle = viewModel::refreshBundle,
+        onFetchVideoItems = viewModel::loadVideoItems,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo,
@@ -63,6 +65,8 @@ fun PlaylistScreen(
 @Composable
 private fun PlaylistScreenContent(
     bundleState: AsyncState<PlaylistBundle>,
+    onRefreshBundle: () -> Unit,
+    onFetchVideoItems: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
@@ -92,6 +96,7 @@ private fun PlaylistScreenContent(
 
     AsyncStateScaffold(
         state = bundleState,
+        onRefresh = onRefreshBundle,
         title = stringResource(R.string.label_playlist),
         onNavigateBack = onNavigateBack,
         actions = { bundle ->
@@ -152,7 +157,10 @@ private fun PlaylistScreenContent(
                         }
                     }
 
-                    paginatedDataItems(bundle.videoItems) { item ->
+                    paginatedDataItems(
+                        data = bundle.videoItems,
+                        onLoad = onFetchVideoItems
+                    ) { item ->
                         VideoItemCard(
                             item = item,
                             onClick = { onNavigateToVideo(item.id) },
@@ -213,9 +221,10 @@ private fun PlaylistScreenContentPreview() {
                         state = PaginatedData.State.Done
                     )
                 ),
-                isRefreshing = false,
-                refresh = {}
+                isRefreshing = false
             ),
+            onRefreshBundle = {},
+            onFetchVideoItems = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {},

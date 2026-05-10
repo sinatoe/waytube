@@ -4,8 +4,10 @@ import app.cash.turbine.test
 import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PaginatedDataFlowTest {
@@ -13,7 +15,7 @@ class PaginatedDataFlowTest {
     fun `test sequential paginated fetch responses`() = runTest {
         val nextResultIterator = iterator {
             yield(FetchResult.Failure(FetchError.UNKNOWN))
-            yield(FetchResult.Success(Page(items = listOf(Unit), next = null)))
+            yield(FetchResult.Success(Page(items = listOf(2), next = null)))
         }
 
         val resultIterator = iterator {
@@ -21,56 +23,84 @@ class PaginatedDataFlowTest {
             yield(
                 FetchResult.Success(
                     Page(
-                        items = listOf(Unit),
+                        items = listOf(1),
                         next = nextResultIterator::next
                     )
                 )
             )
         }
 
-        val flow = paginatedDataFlow(resultIterator::next)
+        val loadSignal = MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        val flow = paginatedDataFlow(
+            loadSignal = loadSignal,
+            fetch = resultIterator::next
+        )
 
         flow.test {
-            awaitItem().let { data ->
-                assertTrue(data.items.isEmpty())
-                assertTrue(
-                    (data.state as? PaginatedData.State.HasMore.Idle)
-                        ?.also { it.load() } != null
-                )
-            }
-
-            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
-
-            assertTrue(
-                (awaitItem().state as? PaginatedData.State.Error)
-                    ?.also { it.retry() } != null
+            assertEquals(
+                PaginatedData(items = emptyList<Int>(), state = PaginatedData.State.Idle),
+                awaitItem()
             )
 
-            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
+            loadSignal.tryEmit(Unit)
 
-            awaitItem().let { data ->
-                assertTrue(data.items.size == 1)
-                assertTrue(
-                    (data.state as? PaginatedData.State.HasMore.Idle)
-                        ?.also { it.load() } != null
-                )
-            }
-
-            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
-
-            assertTrue(
-                (awaitItem().state as? PaginatedData.State.Error)
-                    ?.also { it.retry() } != null
+            assertEquals(
+                PaginatedData(items = emptyList<Int>(), state = PaginatedData.State.Loading),
+                awaitItem()
             )
 
-            assertTrue(awaitItem().state is PaginatedData.State.HasMore.Loading)
+            assertEquals(
+                PaginatedData(
+                    items = emptyList<Int>(),
+                    state = PaginatedData.State.Error(FetchError.UNKNOWN)
+                ),
+                awaitItem()
+            )
 
-            awaitItem().let { data ->
-                assertTrue(data.items.size == 2)
-                assertTrue(data.state is PaginatedData.State.Done)
-            }
+            loadSignal.tryEmit(Unit)
 
-            expectNoEvents()
+            assertEquals(
+                PaginatedData(items = emptyList<Int>(), state = PaginatedData.State.Loading),
+                awaitItem()
+            )
+
+            assertEquals(
+                PaginatedData(items = listOf(1), state = PaginatedData.State.Idle),
+                awaitItem()
+            )
+
+            loadSignal.tryEmit(Unit)
+
+            assertEquals(
+                PaginatedData(items = listOf(1), state = PaginatedData.State.Loading),
+                awaitItem()
+            )
+
+            assertEquals(
+                PaginatedData(
+                    items = listOf(1),
+                    state = PaginatedData.State.Error(FetchError.UNKNOWN)
+                ),
+                awaitItem()
+            )
+
+            loadSignal.tryEmit(Unit)
+
+            assertEquals(
+                PaginatedData(items = listOf(1), state = PaginatedData.State.Loading),
+                awaitItem()
+            )
+
+            assertEquals(
+                PaginatedData(items = listOf(1, 2), state = PaginatedData.State.Done),
+                awaitItem()
+            )
+
+            awaitComplete()
         }
     }
 }

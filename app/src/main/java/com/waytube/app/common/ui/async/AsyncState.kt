@@ -7,12 +7,8 @@ sealed interface AsyncState<out T> {
 
     data class Loaded<T>(
         val data: T,
-        val isRefreshing: Boolean,
-        val refresh: () -> Unit
+        val isRefreshing: Boolean
     ) : AsyncState<T>
 
-    data class Error(
-        val error: FetchError,
-        val retry: () -> Unit
-    ) : AsyncState<Nothing>
+    data class Error(val error: FetchError) : AsyncState<Nothing>
 }
