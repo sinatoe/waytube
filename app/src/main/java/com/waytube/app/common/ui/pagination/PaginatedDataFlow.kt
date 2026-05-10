@@ -4,12 +4,16 @@ import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Page
 import com.waytube.app.common.domain.fold
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.runningFold
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.transformLatest
 
 private sealed interface FetchEvent<out T> {
     data object Started : FetchEvent<Nothing>
@@ -19,6 +23,7 @@ private sealed interface FetchEvent<out T> {
     data class Finished<T>(val page: Page<T>) : FetchEvent<T>
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun <T> paginatedDataFlow(
     page: Page<T>,
     loadSignal: Flow<Unit>
@@ -33,30 +38,25 @@ fun <T> paginatedDataFlow(
     }
 
     fun fetchEventFlow(fetch: suspend () -> FetchResult<Page<T>>): Flow<FetchEvent<T>> =
-        loadSignal
-            .take(1)
-            .transform {
-                emit(FetchEvent.Started)
-                emit(
-                    fetch().fold(
-                        onSuccess = { FetchEvent.Finished(it) },
-                        onFailure = { FetchEvent.Failed(it) }
+        flow {
+            val event = loadSignal
+                .transformLatest {
+                    emit(FetchEvent.Started)
+                    emit(
+                        fetch().fold(
+                            onSuccess = { FetchEvent.Finished(it) },
+                            onFailure = { FetchEvent.Failed(it) }
+                        )
                     )
-                )
-            }
-            .transform { event ->
-                emit(event)
-
-                when (event) {
-                    FetchEvent.Started -> {}
-                    is FetchEvent.Failed -> emitAll(fetchEventFlow(fetch))
-                    is FetchEvent.Finished -> {
-                        event.page.next?.let { fetch ->
-                            emitAll(fetchEventFlow(fetch))
-                        }
-                    }
                 }
+                .onEach { emit(it) }
+                .filterIsInstance<FetchEvent.Finished<T>>()
+                .first()
+
+            event.page.next?.let {
+                emitAll(fetchEventFlow(it))
             }
+        }
 
     return fetchEventFlow(page.next)
         .runningFold(
