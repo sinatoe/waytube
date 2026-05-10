@@ -12,11 +12,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.transformLatest
 
-private enum class Trigger {
-    MANUAL,
-    AUTOMATIC
-}
-
 private sealed interface FetchEvent<out T> {
     data object Started : FetchEvent<Nothing>
 
@@ -31,10 +26,10 @@ fun <T> asyncStateFlow(
     fetch: suspend () -> FetchResult<T>
 ): Flow<AsyncState<T>> {
     return refreshSignal
-        .map { Trigger.MANUAL }
-        .onStart { emit(Trigger.AUTOMATIC) }
-        .transformLatest { trigger ->
-            if (trigger == Trigger.MANUAL) {
+        .map { true }
+        .onStart { emit(false) }
+        .transformLatest { isRefresh ->
+            if (isRefresh) {
                 emit(FetchEvent.Started)
             }
 
