@@ -18,6 +18,7 @@ import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
 import com.waytube.app.video.domain.VideoResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,7 +48,12 @@ class VideoViewModel(
 
     private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
-    private val previewState = asyncStateFlow { repository.getVideo(id) }
+    private val previewRefreshSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    private val previewState = asyncStateFlow(previewRefreshSignal) { repository.getVideo(id) }
         .mapLoaded { response ->
             when (response) {
                 is VideoResponse.Content -> {
@@ -109,6 +115,10 @@ class VideoViewModel(
             started = SharingStarted.Lazily,
             initialValue = VideoScene.Preview(AsyncState.Loading)
         )
+
+    fun refreshPreview() {
+        previewRefreshSignal.tryEmit(Unit)
+    }
 
     private fun requestPlayer(video: Video): Flow<Player?> =
         playbackManager.requestPlayer(id)

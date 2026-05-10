@@ -32,6 +32,7 @@ import com.waytube.app.common.ui.element.RetryButton
 @Composable
 fun <T> AsyncStateScaffold(
     state: AsyncState<T>,
+    onRefresh: () -> Unit,
     title: String,
     onNavigateBack: () -> Unit,
     actions: @Composable (T) -> Unit = {},
@@ -93,7 +94,7 @@ fun <T> AsyncStateScaffold(
                         style = MaterialTheme.typography.titleMedium
                     )
 
-                    RetryButton(onClick = state.retry)
+                    RetryButton(onClick = onRefresh)
                 }
             }
 
@@ -103,7 +104,7 @@ fun <T> AsyncStateScaffold(
                 PullToRefreshBox(
                     state = pullToRefreshState,
                     isRefreshing = state.isRefreshing,
-                    onRefresh = state.refresh,
+                    onRefresh = onRefresh,
                     indicator = {
                         PullToRefreshDefaults.Indicator(
                             state = pullToRefreshState,

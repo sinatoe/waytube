@@ -57,6 +57,7 @@ fun ChannelScreen(
 ) {
     ChannelScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
+        onRefreshBundle = viewModel::refreshBundle,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo
@@ -66,6 +67,7 @@ fun ChannelScreen(
 @Composable
 private fun ChannelScreenContent(
     bundleState: AsyncState<ChannelBundle>,
+    onRefreshBundle: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit
@@ -87,6 +89,7 @@ private fun ChannelScreenContent(
 
     AsyncStateScaffold(
         state = bundleState,
+        onRefresh = onRefreshBundle,
         title = stringResource(R.string.label_channel),
         onNavigateBack = onNavigateBack,
         actions = { bundle ->
@@ -219,9 +222,9 @@ private fun ChannelScreenContentPreview() {
                         state = PaginatedData.State.Done
                     )
                 ),
-                isRefreshing = false,
-                refresh = {}
+                isRefreshing = false
             ),
+            onRefreshBundle = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {}

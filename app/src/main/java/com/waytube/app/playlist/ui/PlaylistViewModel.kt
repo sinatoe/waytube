@@ -9,6 +9,8 @@ import com.waytube.app.common.ui.pagination.paginatedDataFlow
 import com.waytube.app.playlist.domain.PlaylistRepository
 import com.waytube.app.playlist.domain.PlaylistResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -19,7 +21,12 @@ class PlaylistViewModel(
     private val id: String,
     private val repository: PlaylistRepository
 ) : ViewModel() {
-    val bundleState = asyncStateFlow { repository.getPlaylist(id) }
+    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    val bundleState = asyncStateFlow(bundleRefreshSignal) { repository.getPlaylist(id) }
         .flatMapLoaded { response ->
             when (response) {
                 is PlaylistResponse.Content -> {
@@ -39,4 +46,8 @@ class PlaylistViewModel(
             started = SharingStarted.Lazily,
             initialValue = AsyncState.Loading
         )
+
+    fun refreshBundle() {
+        bundleRefreshSignal.tryEmit(Unit)
+    }
 }

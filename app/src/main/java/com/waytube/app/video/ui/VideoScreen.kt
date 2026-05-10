@@ -68,6 +68,7 @@ fun VideoScreen(
         is VideoScene.Preview -> {
             VideoPreviewSceneContent(
                 scene = scene,
+                onRefreshPreview = viewModel::refreshPreview,
                 scrollState = scrollState,
                 onShare = LocalContext.current::shareText,
                 onNavigateBack = onNavigateBack,
@@ -103,6 +104,7 @@ fun VideoScreen(
 @Composable
 private fun VideoPreviewSceneContent(
     scene: VideoScene.Preview,
+    onRefreshPreview: () -> Unit,
     scrollState: ScrollState,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
@@ -110,6 +112,7 @@ private fun VideoPreviewSceneContent(
 ) {
     AsyncStateScaffold(
         state = scene.state,
+        onRefresh = onRefreshPreview,
         title = stringResource(R.string.label_video),
         onNavigateBack = onNavigateBack,
         actions = { preview ->

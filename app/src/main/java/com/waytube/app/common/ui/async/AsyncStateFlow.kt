@@ -4,9 +4,7 @@ import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.fold
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -20,66 +18,52 @@ private enum class Trigger {
 }
 
 private sealed interface FetchEvent<out T> {
-    data object Loading : FetchEvent<Nothing>
+    data object Started : FetchEvent<Nothing>
 
-    data class Success<T>(val data: T) : FetchEvent<T>
+    data class Failed(val error: FetchError) : FetchEvent<Nothing>
 
-    data class Failure(val error: FetchError) : FetchEvent<Nothing>
+    data class Finished<T>(val data: T) : FetchEvent<T>
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-fun <T> asyncStateFlow(fetch: suspend () -> FetchResult<T>): Flow<AsyncState<T>> {
-    val trigger = MutableSharedFlow<Trigger>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-
-    fun notifyTrigger() {
-        trigger.tryEmit(Trigger.MANUAL)
-    }
-
-    return trigger
+fun <T> asyncStateFlow(
+    refreshSignal: Flow<Unit>,
+    fetch: suspend () -> FetchResult<T>
+): Flow<AsyncState<T>> {
+    return refreshSignal
+        .map { Trigger.MANUAL }
         .onStart { emit(Trigger.AUTOMATIC) }
         .transformLatest { trigger ->
             if (trigger == Trigger.MANUAL) {
-                emit(FetchEvent.Loading)
+                emit(FetchEvent.Started)
             }
 
             emit(
                 fetch().fold(
-                    onSuccess = { FetchEvent.Success(it) },
-                    onFailure = { FetchEvent.Failure(it) }
+                    onSuccess = { FetchEvent.Finished(it) },
+                    onFailure = { FetchEvent.Failed(it) }
                 )
             )
         }
         .runningFold(AsyncState.Loading as AsyncState<T>) { state, event ->
             when (event) {
-                FetchEvent.Loading -> when (state) {
-                    is AsyncState.Loaded -> state.copy(
-                        isRefreshing = true,
-                        refresh = {}
-                    )
+                FetchEvent.Started -> when (state) {
+                    is AsyncState.Loaded -> {
+                        state.copy(isRefreshing = true)
+                    }
 
                     else -> AsyncState.Loading
                 }
 
-                is FetchEvent.Success -> AsyncState.Loaded(
-                    data = event.data,
-                    isRefreshing = false,
-                    refresh = ::notifyTrigger
-                )
+                is FetchEvent.Failed -> when (state) {
+                    is AsyncState.Loaded -> state.copy(isRefreshing = false)
+                    else -> AsyncState.Error(error = event.error)
+                }
 
-                is FetchEvent.Failure -> when (state) {
-                    is AsyncState.Loaded -> {
-                        state.copy(
-                            isRefreshing = false,
-                            refresh = ::notifyTrigger
-                        )
-                    }
-
-                    else -> AsyncState.Error(
-                        error = event.error,
-                        retry = ::notifyTrigger
+                is FetchEvent.Finished -> {
+                    AsyncState.Loaded(
+                        data = event.data,
+                        isRefreshing = false
                     )
                 }
             }
@@ -96,8 +80,7 @@ fun <T, R> Flow<AsyncState<T>>.mapLoaded(
             is AsyncState.Loaded -> {
                 AsyncState.Loaded(
                     data = transform(state.data),
-                    isRefreshing = state.isRefreshing,
-                    refresh = state.refresh
+                    isRefreshing = state.isRefreshing
                 )
             }
         }
@@ -115,8 +98,7 @@ fun <T, R> Flow<AsyncState<T>>.flatMapLoaded(
                 transform(state.data).map { data ->
                     AsyncState.Loaded(
                         data = data,
-                        isRefreshing = state.isRefreshing,
-                        refresh = state.refresh
+                        isRefreshing = state.isRefreshing
                     )
                 }
             }

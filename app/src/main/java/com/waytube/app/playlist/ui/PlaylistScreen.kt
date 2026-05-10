@@ -53,6 +53,7 @@ fun PlaylistScreen(
 ) {
     PlaylistScreenContent(
         bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
+        onRefreshBundle = viewModel::refreshBundle,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo,
@@ -63,6 +64,7 @@ fun PlaylistScreen(
 @Composable
 private fun PlaylistScreenContent(
     bundleState: AsyncState<PlaylistBundle>,
+    onRefreshBundle: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
@@ -92,6 +94,7 @@ private fun PlaylistScreenContent(
 
     AsyncStateScaffold(
         state = bundleState,
+        onRefresh = onRefreshBundle,
         title = stringResource(R.string.label_playlist),
         onNavigateBack = onNavigateBack,
         actions = { bundle ->
@@ -213,9 +216,9 @@ private fun PlaylistScreenContentPreview() {
                         state = PaginatedData.State.Done
                     )
                 ),
-                isRefreshing = false,
-                refresh = {}
+                isRefreshing = false
             ),
+            onRefreshBundle = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {},
