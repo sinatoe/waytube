@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -131,7 +132,17 @@ private fun VideoPlaybackScreenContent(
             update = { view ->
                 view.player = bundle.player
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    when (bundle.state) {
+                        VideoPlaybackState.PLAYING, VideoPlaybackState.BUFFERING -> {
+                            Modifier.keepScreenOn()
+                        }
+
+                        else -> Modifier
+                    }
+                )
         )
     }
 }

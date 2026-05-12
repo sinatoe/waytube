@@ -18,10 +18,12 @@ import com.waytube.app.video.domain.VideoRepository
 import com.waytube.app.video.domain.VideoResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -62,20 +64,13 @@ class VideoViewModel(
                     .distinctUntilChanged()
                     .flatMapLatest { isRequested ->
                         if (isRequested) {
-                            requestPlayer(response.video)
+                            requestPlaybackBundle(response.video)
                         } else {
                             flowOf(null)
                         }
                     }
-                    .map { player ->
-                        if (player != null) {
-                            VideoBundle.Playback(
-                                video = response.video,
-                                player = player
-                            )
-                        } else {
-                            VideoBundle.Overview(response.video)
-                        }
+                    .map { bundle ->
+                        bundle ?: VideoBundle.Overview(response.video)
                     }
             }
 
@@ -102,7 +97,7 @@ class VideoViewModel(
         isPlaybackRequested.tryEmit(false)
     }
 
-    private fun requestPlayer(video: Video): Flow<Player?> =
+    private fun requestPlaybackBundle(video: Video): Flow<VideoBundle.Playback?> =
         playbackManager.requestPlayer(id)
             .transformWhile { player ->
                 emit(player)
@@ -142,4 +137,46 @@ class VideoViewModel(
                     play()
                 }
             }
+            .flatMapLatest { player ->
+                player?.videoPlaybackStateFlow()?.map { state ->
+                    VideoBundle.Playback(
+                        video = video,
+                        player = player,
+                        state = state
+                    )
+                } ?: flowOf(null)
+            }
 }
+
+private fun Player.asVideoPlaybackState(): VideoPlaybackState =
+    when {
+        playerError != null -> VideoPlaybackState.ERROR
+        playbackState == Player.STATE_BUFFERING -> VideoPlaybackState.BUFFERING
+        isPlaying -> VideoPlaybackState.PLAYING
+        else -> VideoPlaybackState.PAUSED
+    }
+
+private fun Player.videoPlaybackStateFlow(): Flow<VideoPlaybackState> =
+    callbackFlow {
+        val listener = object : Player.Listener {
+            override fun onEvents(player: Player, events: Player.Events) {
+                if (
+                    events.containsAny(
+                        Player.EVENT_PLAYBACK_STATE_CHANGED,
+                        Player.EVENT_PLAYER_ERROR,
+                        Player.EVENT_IS_PLAYING_CHANGED
+                    )
+                ) {
+                    trySend(player.asVideoPlaybackState())
+                }
+            }
+        }
+
+        addListener(listener)
+
+        trySend(asVideoPlaybackState())
+
+        awaitClose {
+            removeListener(listener)
+        }
+    }

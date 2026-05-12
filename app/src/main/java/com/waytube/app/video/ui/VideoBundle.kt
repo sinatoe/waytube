@@ -5,7 +5,11 @@ import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRestriction
 
 sealed interface VideoBundle {
-    data class Playback(val video: Video, val player: Player) : VideoBundle
+    data class Playback(
+        val video: Video,
+        val player: Player,
+        val state: VideoPlaybackState
+    ) : VideoBundle
 
     data class Overview(val video: Video) : VideoBundle
 
