@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import com.waytube.app.R
 import com.waytube.app.common.ui.action.shareText
+import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.AsyncStateScaffold
 import com.waytube.app.common.ui.element.StyledImage
 import com.waytube.app.common.ui.formatting.toAbsoluteDateString
@@ -53,7 +54,6 @@ import com.waytube.app.common.ui.menu.MenuAction
 import com.waytube.app.common.ui.menu.MoreOptionsMenu
 import com.waytube.app.common.ui.theming.AppTheme
 import com.waytube.app.video.domain.Video
-import com.waytube.app.video.domain.VideoResponse
 import com.waytube.app.video.domain.VideoRestriction
 import kotlin.math.roundToInt
 
@@ -65,20 +65,8 @@ fun VideoScreen(
 ) {
     val scrollState = rememberScrollState()
 
-    when (val scene = viewModel.scene.collectAsStateWithLifecycle().value) {
-        is VideoScene.Preview -> {
-            VideoPreviewSceneContent(
-                scene = scene,
-                onRefreshResponse = viewModel::refreshResponse,
-                scrollState = scrollState,
-                onPlay = viewModel::play,
-                onShare = LocalContext.current::shareText,
-                onNavigateBack = onNavigateBack,
-                onNavigateToChannel = onNavigateToChannel
-            )
-        }
-
-        is VideoScene.Playback -> {
+    when (val bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value) {
+        is AsyncState.Loaded if (bundleState.data is VideoBundle.Playback) -> {
             val view = LocalView.current
             val activity = LocalActivity.current
 
@@ -98,54 +86,96 @@ fun VideoScreen(
                 }
             }
 
-            VideoPlaybackSceneContent(
-                scene = scene,
+            VideoPlaybackScreenContent(
+                bundle = bundleState.data,
                 onStop = viewModel::stop
+            )
+        }
+
+        else -> {
+            VideoOverviewScreenContent(
+                bundleState = bundleState,
+                scrollState = scrollState,
+                onRefreshBundle = viewModel::refreshBundle,
+                onPlay = viewModel::play,
+                onShare = LocalContext.current::shareText,
+                onNavigateBack = onNavigateBack,
+                onNavigateToChannel = onNavigateToChannel
             )
         }
     }
 }
 
 @Composable
-private fun VideoPreviewSceneContent(
-    scene: VideoScene.Preview,
-    onRefreshResponse: () -> Unit,
+private fun VideoPlaybackScreenContent(
+    bundle: VideoBundle.Playback,
+    onStop: () -> Unit
+) {
+    BackHandler {
+        onStop()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .displayCutoutPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            factory = { context ->
+                PlayerView(context).apply {
+                    this.player = bundle.player
+                }
+            },
+            update = { view ->
+                view.player = bundle.player
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+private fun VideoOverviewScreenContent(
+    bundleState: AsyncState<VideoBundle>,
     scrollState: ScrollState,
+    onRefreshBundle: () -> Unit,
     onPlay: () -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     AsyncStateScaffold(
-        state = scene.responseState,
-        onRefresh = onRefreshResponse,
+        state = bundleState,
+        onRefresh = onRefreshBundle,
         title = stringResource(R.string.label_video),
         onNavigateBack = onNavigateBack,
-        actions = { preview ->
-            when (preview) {
-                is VideoResponse.Content -> {
+        actions = { bundle ->
+            when (bundle) {
+                is VideoBundle.Overview -> {
                     MoreOptionsMenu(
                         actions = listOf(
                             MenuAction(
                                 label = stringResource(R.string.label_share),
                                 iconPainter = painterResource(R.drawable.ic_share),
-                                onClick = { onShare(preview.video.url) }
+                                onClick = { onShare(bundle.video.url) }
                             ),
                             MenuAction(
                                 label = stringResource(R.string.label_go_to_channel),
                                 iconPainter = painterResource(R.drawable.ic_person),
-                                onClick = { onNavigateToChannel(preview.video.channelId) }
+                                onClick = { onNavigateToChannel(bundle.video.channelId) }
                             )
                         )
                     )
                 }
 
-                is VideoResponse.Unavailable -> {}
+                is VideoBundle.Unavailable, is VideoBundle.Playback -> {}
             }
         }
-    ) { response, contentPadding ->
-        when (response) {
-            is VideoResponse.Content -> {
+    ) { bundle, contentPadding ->
+        when (bundle) {
+            is VideoBundle.Overview -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -156,7 +186,7 @@ private fun VideoPreviewSceneContent(
                         Surface(onClick = onPlay) {
                             Box(contentAlignment = Alignment.Center) {
                                 StyledImage(
-                                    data = response.video.thumbnailUrl,
+                                    data = bundle.video.thumbnailUrl,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(16f / 9)
@@ -187,7 +217,7 @@ private fun VideoPreviewSceneContent(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = response.video.title,
+                                text = bundle.video.title,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleLarge
@@ -195,10 +225,10 @@ private fun VideoPreviewSceneContent(
 
                             Text(
                                 text = listOf(
-                                    response.video.channelName,
-                                    when (response.video) {
+                                    bundle.video.channelName,
+                                    when (bundle.video) {
                                         is Video.Regular -> {
-                                            response.video.uploadedAt.toAbsoluteDateString()
+                                            bundle.video.uploadedAt.toAbsoluteDateString()
                                         }
 
                                         is Video.Live -> {
@@ -215,24 +245,24 @@ private fun VideoPreviewSceneContent(
 
                             Text(
                                 listOfNotNull(
-                                    when (response.video) {
+                                    when (bundle.video) {
                                         is Video.Regular -> {
                                             pluralStringResource(
                                                 R.plurals.view_count,
-                                                response.video.viewCount.toPluralCount(),
-                                                response.video.viewCount.toCompactString()
+                                                bundle.video.viewCount.toPluralCount(),
+                                                bundle.video.viewCount.toCompactString()
                                             )
                                         }
 
                                         is Video.Live -> {
                                             pluralStringResource(
                                                 R.plurals.watching_count,
-                                                response.video.watchingCount.toPluralCount(),
-                                                response.video.watchingCount.toCompactString()
+                                                bundle.video.watchingCount.toPluralCount(),
+                                                bundle.video.watchingCount.toCompactString()
                                             )
                                         }
                                     },
-                                    response.video.approvalRatio?.let { ratio ->
+                                    bundle.video.approvalRatio?.let { ratio ->
                                         stringResource(
                                             R.string.label_approval_percentage,
                                             (ratio * 100).roundToInt()
@@ -248,14 +278,14 @@ private fun VideoPreviewSceneContent(
                         }
 
                         Text(
-                            text = AnnotatedString.fromHtml(response.video.descriptionHtml),
+                            text = AnnotatedString.fromHtml(bundle.video.descriptionHtml),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            is VideoResponse.Unavailable -> {
+            is VideoBundle.Unavailable -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -265,7 +295,7 @@ private fun VideoPreviewSceneContent(
                 ) {
                     Text(
                         text = stringResource(
-                            when (response.restriction) {
+                            when (bundle.restriction) {
                                 VideoRestriction.AGE -> R.string.message_video_age_restricted
                                 VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
                                 VideoRestriction.PRIVATE -> R.string.message_video_private
@@ -279,36 +309,8 @@ private fun VideoPreviewSceneContent(
                     )
                 }
             }
+
+            is VideoBundle.Playback -> {}
         }
-    }
-}
-
-@Composable
-private fun VideoPlaybackSceneContent(
-    scene: VideoScene.Playback,
-    onStop: () -> Unit
-) {
-    BackHandler {
-        onStop()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .displayCutoutPadding(),
-        contentAlignment = Alignment.Center
-    ) {
-        AndroidView(
-            factory = { context ->
-                PlayerView(context).apply {
-                    this.player = scene.player
-                }
-            },
-            update = { view ->
-                view.player = scene.player
-            },
-            modifier = Modifier.fillMaxSize()
-        )
     }
 }

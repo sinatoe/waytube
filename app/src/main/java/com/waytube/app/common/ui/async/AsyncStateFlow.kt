@@ -6,7 +6,6 @@ import com.waytube.app.common.domain.fold
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
@@ -64,13 +63,3 @@ fun <T, R> asyncStateFlow(
                 }
             }
         }
-
-fun <T> asyncStateFlow(
-    refreshSignal: Flow<Unit>,
-    fetch: suspend () -> FetchResult<T>
-): Flow<AsyncState<T>> =
-    asyncStateFlow(
-        refreshSignal = refreshSignal,
-        fetch = fetch,
-        transform = ::flowOf
-    )

@@ -46,61 +46,52 @@ class VideoViewModel(
 
     private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
-    private val responseRefreshSignal = MutableSharedFlow<Unit>(
+    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(responseRefreshSignal) { repository.getVideo(id) }
+    val bundleState = asyncStateFlow(
+        refreshSignal = bundleRefreshSignal,
+        fetch = { repository.getVideo(id) }
+    ) { response ->
+        when (response) {
+            is VideoResponse.Content -> {
+                isPlaybackRequested
+                    .onStart { emit(false) }
+                    .distinctUntilChanged()
+                    .flatMapLatest { isRequested ->
+                        if (isRequested) {
+                            requestPlayer(response.video)
+                        } else {
+                            flowOf(null)
+                        }
+                    }
+                    .map { player ->
+                        if (player != null) {
+                            VideoBundle.Playback(
+                                video = response.video,
+                                player = player
+                            )
+                        } else {
+                            VideoBundle.Overview(response.video)
+                        }
+                    }
+            }
+
+            is VideoResponse.Unavailable -> {
+                flowOf(VideoBundle.Unavailable(response.restriction))
+            }
+        }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             initialValue = AsyncState.Loading
         )
 
-    val scene = responseState
-        .map { state ->
-            (state as? AsyncState.Loaded)?.let { (preview, isRefreshing) ->
-                (preview as? VideoResponse.Content)?.video?.takeIf { !isRefreshing }
-            }
-        }
-        .distinctUntilChanged()
-        .flatMapLatest { video ->
-            isPlaybackRequested
-                .onStart { emit(false) }
-                .map { isRequested ->
-                    video?.takeIf { isRequested }
-                }
-        }
-        .flatMapLatest { video ->
-            if (video != null) {
-                requestPlayer(video).map { player ->
-                    player?.let {
-                        VideoScene.Playback(
-                            video = video,
-                            player = it
-                        )
-                    }
-                }
-            } else {
-                flowOf(null)
-            }
-        }
-        .flatMapLatest { playbackScene ->
-            if (playbackScene != null) {
-                flowOf(playbackScene)
-            } else {
-                responseState.map { VideoScene.Preview(it) }
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = VideoScene.Preview(AsyncState.Loading)
-        )
-
-    fun refreshResponse() {
-        responseRefreshSignal.tryEmit(Unit)
+    fun refreshBundle() {
+        bundleRefreshSignal.tryEmit(Unit)
     }
 
     fun play() {
