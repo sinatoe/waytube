@@ -5,6 +5,7 @@ import com.waytube.app.common.domain.FetchError
 import com.waytube.app.common.domain.FetchResult
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -24,7 +25,11 @@ class AsyncStateFlowTest {
             onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
 
-        val flow = asyncStateFlow(refreshSignal = refreshSignal, fetch = resultIterator::next)
+        val flow = asyncStateFlow(
+            refreshSignal = refreshSignal,
+            fetch = resultIterator::next,
+            transform = ::flowOf
+        )
 
         flow.test {
             assertEquals(AsyncState.Loading, awaitItem())
