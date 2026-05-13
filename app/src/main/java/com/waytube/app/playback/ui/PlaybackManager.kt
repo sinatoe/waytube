@@ -34,9 +34,9 @@ class PlaybackManager(private val controllerBuilder: MediaController.Builder) {
             }
         }
 
-        trySend(!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
-
         lifecycle.addObserver(observer)
+
+        trySend(!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
 
         awaitClose {
             lifecycle.removeObserver(observer)
