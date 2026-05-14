@@ -1,11 +1,17 @@
 package com.waytube.app.navigation.ui
 
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.unveilIn
+import androidx.compose.animation.veilOut
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -13,6 +19,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
 import com.waytube.app.channel.ui.ChannelScreen
 import com.waytube.app.navigation.domain.DeepLinkResult
 import com.waytube.app.playback.ui.PlaybackManager
@@ -51,6 +58,7 @@ private fun <T : NavKey> NavBackStack<T>.pop(element: T) {
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavigationHost(
     viewModel: NavigationViewModel,
@@ -82,13 +90,19 @@ fun NavigationHost(
                 rememberViewModelStoreNavEntryDecorator()
             ),
             transitionSpec = {
-                slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 2 }
+                slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 } + veilOut()
             },
             popTransitionSpec = {
-                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
+                slideInHorizontally { -it / 4 } + unveilIn() togetherWith slideOutHorizontally { it }
             },
-            predictivePopTransitionSpec = {
-                slideInHorizontally { -it / 2 } togetherWith slideOutHorizontally { it }
+            predictivePopTransitionSpec = { edge ->
+                unveilIn() togetherWith scaleOut(
+                    targetScale = 0.5f,
+                    transformOrigin = TransformOrigin(
+                        pivotFractionX = if (edge == NavigationEvent.EDGE_RIGHT) 0.25f else 0.75f,
+                        pivotFractionY = 0.5f
+                    )
+                ) + fadeOut()
             },
             entryProvider = entryProvider {
                 entry<SearchRoute> {
