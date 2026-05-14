@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -61,7 +60,6 @@ class VideoViewModel(
             is VideoResponse.Content -> {
                 isPlaybackRequested
                     .onStart { emit(false) }
-                    .distinctUntilChanged()
                     .flatMapLatest { isRequested ->
                         if (isRequested) {
                             requestPlaybackBundle(response.video)
