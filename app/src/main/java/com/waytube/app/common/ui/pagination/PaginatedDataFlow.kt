@@ -93,6 +93,6 @@ fun <T> paginatedDataFlow(
     fetch: suspend () -> FetchResult<Page<T>>
 ): Flow<PaginatedData<T>> =
     paginatedDataFlow(
-        page = Page(items = emptyList(), next = fetch),
-        loadSignal = loadSignal
+        loadSignal = loadSignal,
+        page = Page(items = emptyList(), next = fetch)
     )
