@@ -99,7 +99,11 @@ fun NavigationHost(
                 unveilIn() togetherWith scaleOut(
                     targetScale = 0.5f,
                     transformOrigin = TransformOrigin(
-                        pivotFractionX = if (edge == NavigationEvent.EDGE_RIGHT) 0.25f else 0.75f,
+                        pivotFractionX = when (edge) {
+                            NavigationEvent.EDGE_LEFT -> 0.75f
+                            NavigationEvent.EDGE_RIGHT -> 0.25f
+                            else -> 0.5f
+                        },
                         pivotFractionY = 0.5f
                     )
                 ) + fadeOut()
