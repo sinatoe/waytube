@@ -54,6 +54,16 @@ class VideoViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    private val skipSegmentsState = asyncStateFlow(
+        refreshSignal = emptyFlow(),
+        fetch = { repository.getSkipSegments(id) }
+    ) { flowOf(it) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = AsyncState.Loading
+        )
+
     val bundleState = asyncStateFlow(
         refreshSignal = bundleRefreshSignal,
         fetch = { repository.getVideo(id) }
@@ -129,14 +139,7 @@ class VideoViewModel(
                 if (player != null) {
                     combine(
                         player.videoPlaybackStateFlow(),
-                        if (video is Video.Regular) {
-                            asyncStateFlow(
-                                refreshSignal = emptyFlow(),
-                                fetch = { repository.getSkipSegments(video.id) }
-                            ) { flowOf(it) }
-                        } else {
-                            flowOf(null)
-                        }
+                        (if (video is Video.Regular) skipSegmentsState else flowOf(null))
                             .transformLatest { state ->
                                 emit(state)
 
