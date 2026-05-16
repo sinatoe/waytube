@@ -23,12 +23,13 @@ To download the APK file directly, visit [Releases](https://github.com/sinatoe/w
 
 ## Showcase
 
-<img src="./assets/app-showcase.png" alt width="60%">
+<img src="./assets/app-showcase.png" alt>
 
 ## Acknowledgements
 
 - [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)
 - [SponsorBlock](https://sponsor.ajay.app)
+- [Return YouTube Dislike](https://returnyoutubedislike.com)
 
 ## License
 
