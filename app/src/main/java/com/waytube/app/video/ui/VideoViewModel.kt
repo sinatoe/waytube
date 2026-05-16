@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -34,7 +36,6 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.transformWhile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VideoViewModel(
@@ -44,6 +45,7 @@ class VideoViewModel(
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
     private var savedPosition by savedStateHandle.saved<Duration?> { null }
+    private var skippedSegmentIds by savedStateHandle.saved { emptySet<String>() }
 
     private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
 
@@ -101,13 +103,6 @@ class VideoViewModel(
                 emit(player)
                 player != null
             }
-            .transformLatest { player ->
-                emit(player)
-                while (player != null) {
-                    delay(1.seconds)
-                    savedPosition = player.currentPosition.milliseconds
-                }
-            }
             .onEach { player ->
                 player?.apply {
                     val (uri, mimeType) = when (video) {
@@ -136,13 +131,51 @@ class VideoViewModel(
                 }
             }
             .flatMapLatest { player ->
-                player?.videoPlaybackStateFlow()?.map { state ->
-                    VideoBundle.Playback(
-                        video = video,
-                        player = player,
-                        state = state
-                    )
-                } ?: flowOf(null)
+                if (player != null) {
+                    combine(
+                        player.videoPlaybackStateFlow(),
+                        if (video is Video.Regular) {
+                            asyncStateFlow(
+                                refreshSignal = emptyFlow(),
+                                fetch = { repository.getSkipSegments(video.id) }
+                            ) { flowOf(it) }
+                        } else {
+                            flowOf(null)
+                        }
+                            .transformLatest { state ->
+                                emit(state)
+
+                                while (video is Video.Regular) {
+                                    val position = player.currentPosition.milliseconds.also {
+                                        savedPosition = it
+                                    }
+
+                                    val segments = (state as? AsyncState.Loaded)?.data
+
+                                    segments
+                                        ?.find { segment ->
+                                            position in segment.start..segment.end
+                                                    && !skippedSegmentIds.contains(segment.id)
+                                        }
+                                        ?.let { segment ->
+                                            player.seekTo(segment.end.inWholeMilliseconds)
+                                            skippedSegmentIds = skippedSegmentIds + segment.id
+                                        }
+
+                                    delay(500.milliseconds)
+                                }
+                            }
+                    ) { state, skipSegmentsState ->
+                        VideoBundle.Playback(
+                            video = video,
+                            player = player,
+                            state = state,
+                            skipSegmentsState = skipSegmentsState
+                        )
+                    }
+                } else {
+                    flowOf(null)
+                }
             }
 }
 
