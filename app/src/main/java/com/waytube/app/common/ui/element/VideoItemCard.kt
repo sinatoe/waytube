@@ -2,15 +2,20 @@ package com.waytube.app.common.ui.element
 
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
 import com.waytube.app.R
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.formatting.toCompactString
@@ -34,10 +39,6 @@ fun VideoItemCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier,
-        imageOverlayText = when (item) {
-            is VideoItem.Regular -> item.duration.toFormattedString()
-            is VideoItem.Live -> stringResource(R.string.label_live)
-        },
         imageContent = {
             StyledImage(
                 data = item.thumbnailUrl,
@@ -46,6 +47,28 @@ fun VideoItemCard(
                     .aspectRatio(16f / 9)
                     .clip(MaterialTheme.shapes.small)
             )
+
+            if (item is VideoItem.Regular) {
+                AppTheme(darkTheme = true) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .clip(MaterialTheme.shapes.extraSmall),
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        Text(
+                            text = item.duration.toFormattedString(),
+                            modifier = Modifier.padding(4.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                lineHeightStyle = LineHeightStyle.Default
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
         },
         detailsContent = {
             Text(
@@ -67,20 +90,29 @@ fun VideoItemCard(
 
             Text(
                 when (item) {
-                    is VideoItem.Regular -> listOfNotNull(
-                        pluralStringResource(
-                            R.plurals.view_count,
-                            item.viewCount.toPluralCount(),
-                            item.viewCount.toCompactString()
-                        ),
-                        item.uploadedAt?.toRelativeTimeString()
-                    ).joinToString(stringResource(R.string.separator_bullet))
+                    is VideoItem.Regular -> {
+                        listOfNotNull(
+                            item.uploadedAt?.toRelativeTimeString(),
+                            pluralStringResource(
+                                R.plurals.view_count,
+                                item.viewCount.toPluralCount(),
+                                item.viewCount.toCompactString()
+                            )
+                        )
+                            .joinToString(stringResource(R.string.separator_bullet))
+                    }
 
-                    is VideoItem.Live -> pluralStringResource(
-                        R.plurals.watching_count,
-                        item.watchingCount.toPluralCount(),
-                        item.watchingCount.toCompactString()
-                    )
+                    is VideoItem.Live -> {
+                        listOfNotNull(
+                            stringResource(R.string.label_live),
+                            pluralStringResource(
+                                R.plurals.watching_count,
+                                item.watchingCount.toPluralCount(),
+                                item.watchingCount.toCompactString()
+                            )
+                        )
+                            .joinToString(stringResource(R.string.separator_bullet))
+                    }
                 },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

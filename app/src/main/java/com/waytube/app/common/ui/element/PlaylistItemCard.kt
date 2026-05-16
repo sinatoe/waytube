@@ -16,6 +16,7 @@ import com.waytube.app.common.domain.PlaylistItem
 import com.waytube.app.common.ui.formatting.toCompactString
 import com.waytube.app.common.ui.formatting.toPluralCount
 import com.waytube.app.common.ui.theming.AppTheme
+import kotlin.collections.joinToString
 
 @Composable
 fun PlaylistItemCard(
@@ -28,7 +29,6 @@ fun PlaylistItemCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier,
-        imageOverlayText = stringResource(R.string.label_playlist),
         imageContent = {
             StyledImage(
                 data = item.thumbnailUrl,
@@ -55,11 +55,16 @@ fun PlaylistItemCard(
             )
 
             Text(
-                text = pluralStringResource(
-                    R.plurals.video_count,
-                    item.videoCount.toPluralCount(),
-                    item.videoCount.toCompactString()
-                ),
+                text = listOfNotNull(
+                    stringResource(R.string.label_playlist),
+                    pluralStringResource(
+                        R.plurals.video_count,
+                        item.videoCount.toPluralCount(),
+                        item.videoCount.toCompactString()
+                    )
+                )
+                    .joinToString(stringResource(R.string.separator_bullet))
+                ,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall,
