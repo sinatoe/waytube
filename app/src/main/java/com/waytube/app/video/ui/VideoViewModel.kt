@@ -105,11 +105,6 @@ class VideoViewModel(
             }
             .onEach { player ->
                 player?.apply {
-                    val (uri, mimeType) = when (video) {
-                        is Video.Regular -> video.dashManifestUrl to MimeTypes.APPLICATION_MPD
-                        is Video.Live -> video.hlsPlaylistUrl to MimeTypes.APPLICATION_M3U8
-                    }
-
                     val mediaMetadata = MediaMetadata.Builder()
                         .setTitle(video.title)
                         .setArtist(video.channelName)
@@ -117,8 +112,8 @@ class VideoViewModel(
                         .build()
 
                     val mediaItem = MediaItem.Builder()
-                        .setUri(uri)
-                        .setMimeType(mimeType)
+                        .setUri(video.streamUrl)
+                        .setMimeType(MimeTypes.APPLICATION_MPD)
                         .setMediaMetadata(mediaMetadata)
                         .build()
 

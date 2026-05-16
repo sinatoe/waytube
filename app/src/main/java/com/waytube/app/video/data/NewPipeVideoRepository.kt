@@ -100,32 +100,36 @@ private fun StreamInfo.toVideo(approvalRatio: Float?): Video {
     val channelId = ServiceList.YouTube.channelLHFactory.getId(uploaderUrl)
 
     return when (streamType) {
-        StreamType.VIDEO_STREAM -> Video.Regular(
-            id = id,
-            url = url,
-            title = name,
-            thumbnailUrl = thumbnailUrl,
-            descriptionHtml = description.content,
-            approvalRatio = approvalRatio,
-            channelId = channelId,
-            channelName = uploaderName,
-            dashManifestUrl = generateDashManifestUrl(),
-            uploadedAt = uploadDate.instant.toKotlinInstant(),
-            viewCount = viewCount
-        )
+        StreamType.VIDEO_STREAM, StreamType.POST_LIVE_STREAM -> {
+            Video.Regular(
+                id = id,
+                url = url,
+                streamUrl = dashMpdUrl.takeIf { it.isNotEmpty() } ?: generateDashManifestUrl(),
+                title = name,
+                thumbnailUrl = thumbnailUrl,
+                descriptionHtml = description.content,
+                approvalRatio = approvalRatio,
+                channelId = channelId,
+                channelName = uploaderName,
+                uploadedAt = uploadDate.instant.toKotlinInstant(),
+                viewCount = viewCount
+            )
+        }
 
-        StreamType.LIVE_STREAM -> Video.Live(
-            id = id,
-            url = url,
-            title = name,
-            thumbnailUrl = thumbnailUrl,
-            descriptionHtml = description.content,
-            approvalRatio = approvalRatio,
-            channelId = channelId,
-            channelName = uploaderName,
-            hlsPlaylistUrl = hlsUrl,
-            watchingCount = viewCount
-        )
+        StreamType.LIVE_STREAM -> {
+            Video.Live(
+                id = id,
+                url = url,
+                streamUrl = dashMpdUrl,
+                title = name,
+                thumbnailUrl = thumbnailUrl,
+                descriptionHtml = description.content,
+                approvalRatio = approvalRatio,
+                channelId = channelId,
+                channelName = uploaderName,
+                watchingCount = viewCount
+            )
+        }
 
         else -> error("Unknown stream type")
     }
