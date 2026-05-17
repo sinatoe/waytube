@@ -66,8 +66,8 @@ fun VideoScreen(
 ) {
     val scrollState = rememberScrollState()
 
-    when (val bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value) {
-        is AsyncState.Loaded if (bundleState.data is VideoBundle.Playback) -> {
+    when (val modelState = viewModel.model.collectAsStateWithLifecycle().value) {
+        is AsyncState.Loaded if (modelState.data is VideoModel.Playback) -> {
             val view = LocalView.current
             val activity = LocalActivity.current
 
@@ -88,17 +88,16 @@ fun VideoScreen(
             }
 
             VideoPlaybackScreenContent(
-                bundle = bundleState.data,
-                onStop = viewModel::stop
+                model = modelState.data,
+                onIntent = viewModel::handleIntent
             )
         }
 
         else -> {
             VideoOverviewScreenContent(
-                bundleState = bundleState,
+                modelState = modelState,
                 scrollState = scrollState,
-                onRefreshBundle = viewModel::refreshBundle,
-                onPlay = viewModel::play,
+                onIntent = viewModel::handleIntent,
                 onShare = LocalContext.current::shareText,
                 onNavigateBack = onNavigateBack,
                 onNavigateToChannel = onNavigateToChannel
@@ -109,11 +108,11 @@ fun VideoScreen(
 
 @Composable
 private fun VideoPlaybackScreenContent(
-    bundle: VideoBundle.Playback,
-    onStop: () -> Unit
+    model: VideoModel.Playback,
+    onIntent: (VideoIntent) -> Unit
 ) {
     BackHandler {
-        onStop()
+        onIntent(VideoIntent.StopPlayback)
     }
 
     Box(
@@ -126,16 +125,16 @@ private fun VideoPlaybackScreenContent(
         AndroidView(
             factory = { context ->
                 PlayerView(context).apply {
-                    this.player = bundle.player
+                    this.player = model.player
                 }
             },
             update = { view ->
-                view.player = bundle.player
+                view.player = model.player
             },
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    when (bundle.state) {
+                    when (model.state) {
                         VideoPlaybackState.PLAYING, VideoPlaybackState.BUFFERING -> {
                             Modifier.keepScreenOn()
                         }
@@ -149,44 +148,43 @@ private fun VideoPlaybackScreenContent(
 
 @Composable
 private fun VideoOverviewScreenContent(
-    bundleState: AsyncState<VideoBundle>,
+    modelState: AsyncState<VideoModel>,
     scrollState: ScrollState,
-    onRefreshBundle: () -> Unit,
-    onPlay: () -> Unit,
+    onIntent: (VideoIntent) -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToChannel: (String) -> Unit
 ) {
     AsyncStateScaffold(
-        state = bundleState,
-        onRefresh = onRefreshBundle,
+        state = modelState,
+        onRefresh = { onIntent(VideoIntent.Refresh) },
         title = stringResource(R.string.label_video),
         onNavigateBack = onNavigateBack,
-        actions = { bundle ->
-            when (bundle) {
-                is VideoBundle.Overview -> {
+        actions = { model ->
+            when (model) {
+                is VideoModel.Overview -> {
                     MoreOptionsMenu(
                         actions = listOf(
                             MenuAction(
                                 label = stringResource(R.string.label_share),
                                 iconPainter = painterResource(R.drawable.ic_share),
-                                onClick = { onShare(bundle.video.url) }
+                                onClick = { onShare(model.video.url) }
                             ),
                             MenuAction(
                                 label = stringResource(R.string.label_go_to_channel),
                                 iconPainter = painterResource(R.drawable.ic_person),
-                                onClick = { onNavigateToChannel(bundle.video.channelId) }
+                                onClick = { onNavigateToChannel(model.video.channelId) }
                             )
                         )
                     )
                 }
 
-                is VideoBundle.Unavailable, is VideoBundle.Playback -> {}
+                is VideoModel.Unavailable, is VideoModel.Playback -> {}
             }
         }
-    ) { bundle, contentPadding ->
-        when (bundle) {
-            is VideoBundle.Overview -> {
+    ) { model, contentPadding ->
+        when (model) {
+            is VideoModel.Overview -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -194,10 +192,10 @@ private fun VideoOverviewScreenContent(
                         .padding(contentPadding)
                 ) {
                     AppTheme(darkTheme = true) {
-                        Surface(onClick = onPlay) {
+                        Surface(onClick = { onIntent(VideoIntent.StartPlayback) }) {
                             Box(contentAlignment = Alignment.Center) {
                                 StyledImage(
-                                    data = bundle.video.thumbnailUrl,
+                                    data = model.video.thumbnailUrl,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(16f / 9)
@@ -228,7 +226,7 @@ private fun VideoOverviewScreenContent(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = bundle.video.title,
+                                text = model.video.title,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleLarge
@@ -236,10 +234,10 @@ private fun VideoOverviewScreenContent(
 
                             Text(
                                 text = listOf(
-                                    bundle.video.channelName,
-                                    when (bundle.video) {
+                                    model.video.channelName,
+                                    when (model.video) {
                                         is Video.Regular -> {
-                                            bundle.video.uploadedAt.toAbsoluteDateString()
+                                            model.video.uploadedAt.toAbsoluteDateString()
                                         }
 
                                         is Video.Live -> {
@@ -256,24 +254,24 @@ private fun VideoOverviewScreenContent(
 
                             Text(
                                 listOfNotNull(
-                                    when (bundle.video) {
+                                    when (model.video) {
                                         is Video.Regular -> {
                                             pluralStringResource(
                                                 R.plurals.view_count,
-                                                bundle.video.viewCount.toPluralCount(),
-                                                bundle.video.viewCount.toCompactString()
+                                                model.video.viewCount.toPluralCount(),
+                                                model.video.viewCount.toCompactString()
                                             )
                                         }
 
                                         is Video.Live -> {
                                             pluralStringResource(
                                                 R.plurals.watching_count,
-                                                bundle.video.watchingCount.toPluralCount(),
-                                                bundle.video.watchingCount.toCompactString()
+                                                model.video.watchingCount.toPluralCount(),
+                                                model.video.watchingCount.toCompactString()
                                             )
                                         }
                                     },
-                                    bundle.video.approvalRatio?.let { ratio ->
+                                    model.video.approvalRatio?.let { ratio ->
                                         stringResource(
                                             R.string.label_approval_percentage,
                                             (ratio * 100).roundToInt()
@@ -289,14 +287,14 @@ private fun VideoOverviewScreenContent(
                         }
 
                         Text(
-                            text = AnnotatedString.fromHtml(bundle.video.descriptionHtml),
+                            text = AnnotatedString.fromHtml(model.video.descriptionHtml),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            is VideoBundle.Unavailable -> {
+            is VideoModel.Unavailable -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -306,7 +304,7 @@ private fun VideoOverviewScreenContent(
                 ) {
                     Text(
                         text = stringResource(
-                            when (bundle.restriction) {
+                            when (model.restriction) {
                                 VideoRestriction.AGE -> R.string.message_video_age_restricted
                                 VideoRestriction.MEMBERS_ONLY -> R.string.message_video_members_only
                                 VideoRestriction.PRIVATE -> R.string.message_video_private
@@ -321,7 +319,7 @@ private fun VideoOverviewScreenContent(
                 }
             }
 
-            is VideoBundle.Playback -> {}
+            is VideoModel.Playback -> {}
         }
     }
 }

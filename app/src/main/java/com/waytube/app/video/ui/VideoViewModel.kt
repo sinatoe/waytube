@@ -51,38 +51,39 @@ class VideoViewModel(
     private var savedPosition by savedStateHandle.saved<Duration?> { null }
     private var skippedSegmentIds by savedStateHandle.saved { emptySet<String>() }
 
-    private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-
-    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
+    private val refreshSignal = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(bundleRefreshSignal) { repository.getVideo(id) }
+    private val playbackRequestSignal = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getVideo(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    private val skipSegmentsState =
-        asyncStateFlow(emptyFlow<Nothing>()) { repository.getSkipSegments(id) }
-            .shareIn(
-                scope = viewModelScope,
-                started = SharingStarted.Lazily,
-                replay = 1
-            )
+    private val skipSegmentsState = asyncStateFlow(
+        emptyFlow<Nothing>()
+    ) { repository.getSkipSegments(id) }
+        .shareIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            replay = 1
+        )
 
-    private val playbackBundle = responseState
+    private val playbackModel = responseState
         .filterIsInstance<AsyncState.Loaded<VideoResponse.Content>>()
         .distinctUntilChanged()
         .flatMapLatest { state ->
             if (!state.isRefreshing) {
-                isPlaybackRequested
+                playbackRequestSignal
                     .onStart { emit(false) }
                     .flatMapLatest { isRequested ->
                         if (isRequested) {
-                            requestPlaybackBundle(state.data.video)
+                            requestPlaybackModel(state.data.video)
                         } else {
                             flowOf(null)
                         }
@@ -92,15 +93,15 @@ class VideoViewModel(
             }
         }
 
-    val bundleState = responseState
+    val model = responseState
         .flatMapLatestData { state ->
             when (state) {
                 is VideoResponse.Content -> {
-                    playbackBundle.map { it ?: VideoBundle.Overview(state.video) }
+                    playbackModel.map { it ?: VideoModel.Overview(state.video) }
                 }
 
                 is VideoResponse.Unavailable -> {
-                    flowOf(VideoBundle.Unavailable(state.restriction))
+                    flowOf(VideoModel.Unavailable(state.restriction))
                 }
             }
         }
@@ -110,19 +111,15 @@ class VideoViewModel(
             initialValue = AsyncState.Loading
         )
 
-    fun refreshBundle() {
-        bundleRefreshSignal.tryEmit(Unit)
+    fun handleIntent(intent: VideoIntent) {
+        when (intent) {
+            VideoIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            VideoIntent.StartPlayback -> playbackRequestSignal.tryEmit(true)
+            VideoIntent.StopPlayback -> playbackRequestSignal.tryEmit(false)
+        }
     }
 
-    fun play() {
-        isPlaybackRequested.tryEmit(true)
-    }
-
-    fun stop() {
-        isPlaybackRequested.tryEmit(false)
-    }
-
-    private fun requestPlaybackBundle(video: Video): Flow<VideoBundle.Playback?> =
+    private fun requestPlaybackModel(video: Video): Flow<VideoModel.Playback?> =
         playbackManager.requestPlayer(id)
             .transformWhile { player ->
                 emit(player)
@@ -179,7 +176,7 @@ class VideoViewModel(
                                 }
                             }
                     ) { state, skipSegmentsState ->
-                        VideoBundle.Playback(
+                        VideoModel.Playback(
                             video = video,
                             player = player,
                             state = state,
