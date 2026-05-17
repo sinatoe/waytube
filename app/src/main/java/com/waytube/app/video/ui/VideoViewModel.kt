@@ -30,13 +30,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.transformWhile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -51,37 +51,39 @@ class VideoViewModel(
     private var savedPosition by savedStateHandle.saved<Duration?> { null }
     private var skippedSegmentIds by savedStateHandle.saved { emptySet<String>() }
 
-    private val isPlaybackRequested = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-
-    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
+    private val refreshSignal = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(bundleRefreshSignal) { repository.getVideo(id) }
+    private val playbackRequestSignal = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getVideo(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    private val skipSegmentsState = asyncStateFlow(emptyFlow()) { repository.getSkipSegments(id) }
+    private val skipSegmentsState = asyncStateFlow(
+        emptyFlow<Nothing>()
+    ) { repository.getSkipSegments(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    private val playbackBundle = responseState
+    private val playbackModel = responseState
         .filterIsInstance<AsyncState.Loaded<VideoResponse.Content>>()
         .distinctUntilChanged()
         .flatMapLatest { state ->
             if (!state.isRefreshing) {
-                isPlaybackRequested
+                playbackRequestSignal
                     .onStart { emit(false) }
                     .flatMapLatest { isRequested ->
                         if (isRequested) {
-                            requestPlaybackBundle(state.data.video)
+                            requestPlaybackModel(state.data.video)
                         } else {
                             flowOf(null)
                         }
@@ -91,15 +93,15 @@ class VideoViewModel(
             }
         }
 
-    val bundleState = responseState
-        .flatMapLatestData { state ->
-            when (state) {
+    val modelState = responseState
+        .flatMapLatestData { response ->
+            when (response) {
                 is VideoResponse.Content -> {
-                    playbackBundle.map { it ?: VideoBundle.Overview(state.video) }
+                    playbackModel.map { it ?: VideoModel.Overview(response.video) }
                 }
 
                 is VideoResponse.Unavailable -> {
-                    flowOf(VideoBundle.Unavailable(state.restriction))
+                    flowOf(VideoModel.Unavailable(response.restriction))
                 }
             }
         }
@@ -109,19 +111,15 @@ class VideoViewModel(
             initialValue = AsyncState.Loading
         )
 
-    fun refreshBundle() {
-        bundleRefreshSignal.tryEmit(Unit)
+    fun handleIntent(intent: VideoIntent) {
+        when (intent) {
+            VideoIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            VideoIntent.StartPlayback -> playbackRequestSignal.tryEmit(true)
+            VideoIntent.StopPlayback -> playbackRequestSignal.tryEmit(false)
+        }
     }
 
-    fun play() {
-        isPlaybackRequested.tryEmit(true)
-    }
-
-    fun stop() {
-        isPlaybackRequested.tryEmit(false)
-    }
-
-    private fun requestPlaybackBundle(video: Video): Flow<VideoBundle.Playback?> =
+    private fun requestPlaybackModel(video: Video): Flow<VideoModel.Playback?> =
         playbackManager.requestPlayer(id)
             .transformWhile { player ->
                 emit(player)
@@ -150,76 +148,77 @@ class VideoViewModel(
                 }
             }
             .flatMapLatest { player ->
-                if (player != null) {
-                    combine(
-                        player.videoPlaybackStateFlow(),
-                        (if (video is Video.Regular) skipSegmentsState else flowOf(null))
-                            .transformLatest { state ->
-                                emit(state)
+                player?.let { player ->
+                    val skipSegmentsState = if (video is Video.Regular) {
+                        combine(
+                            skipSegmentsState,
+                            player
+                                .positionFlow()
+                                .onEach { savedPosition = it }
+                        ) { state, position -> state to position }
+                            .onEach { (state, position) ->
+                                val segments = (state as? AsyncState.Loaded)?.data
 
-                                while (video is Video.Regular) {
-                                    val position = player.currentPosition.milliseconds.also {
-                                        savedPosition = it
-                                    }
+                                val segmentToSkip = segments?.find {
+                                    position in it.start..it.end && it.id !in skippedSegmentIds
+                                }
 
-                                    val segments = (state as? AsyncState.Loaded)?.data
-
-                                    segments
-                                        ?.find { segment ->
-                                            position in segment.start..segment.end
-                                                    && !skippedSegmentIds.contains(segment.id)
-                                        }
-                                        ?.let { segment ->
-                                            player.seekTo(segment.end.inWholeMilliseconds)
-                                            skippedSegmentIds = skippedSegmentIds + segment.id
-                                        }
-
-                                    delay(500.milliseconds)
+                                if (segmentToSkip != null) {
+                                    player.seekTo(segmentToSkip.end.inWholeMilliseconds)
+                                    skippedSegmentIds = skippedSegmentIds + segmentToSkip.id
                                 }
                             }
-                    ) { state, skipSegmentsState ->
-                        VideoBundle.Playback(
+                            .map { (state, _) -> state }
+                    } else flowOf(null)
+
+                    combine(
+                        player.playbackSessionStatusFlow(),
+                        skipSegmentsState
+                    ) { status, skipSegments ->
+                        VideoModel.Playback(
                             video = video,
-                            player = player,
-                            state = state,
-                            skipSegmentsState = skipSegmentsState
+                            session = VideoPlaybackSession(player, status),
+                            skipSegmentsState = skipSegments
                         )
                     }
-                } else {
-                    flowOf(null)
-                }
+                } ?: flowOf(null)
             }
 }
 
-private fun Player.asVideoPlaybackState(): VideoPlaybackState =
-    when {
-        playerError != null -> VideoPlaybackState.ERROR
-        playbackState == Player.STATE_BUFFERING -> VideoPlaybackState.BUFFERING
-        isPlaying -> VideoPlaybackState.PLAYING
-        else -> VideoPlaybackState.PAUSED
-    }
+private fun Player.asPlaybackSessionStatus(): VideoPlaybackSession.Status = when {
+    playerError != null -> VideoPlaybackSession.Status.ERROR
+    playbackState == Player.STATE_BUFFERING -> VideoPlaybackSession.Status.BUFFERING
+    isPlaying -> VideoPlaybackSession.Status.PLAYING
+    else -> VideoPlaybackSession.Status.PAUSED
+}
 
-private fun Player.videoPlaybackStateFlow(): Flow<VideoPlaybackState> =
-    callbackFlow {
-        val listener = object : Player.Listener {
-            override fun onEvents(player: Player, events: Player.Events) {
-                if (
-                    events.containsAny(
-                        Player.EVENT_PLAYBACK_STATE_CHANGED,
-                        Player.EVENT_PLAYER_ERROR,
-                        Player.EVENT_IS_PLAYING_CHANGED
-                    )
-                ) {
-                    trySend(player.asVideoPlaybackState())
-                }
+private fun Player.playbackSessionStatusFlow(): Flow<VideoPlaybackSession.Status> = callbackFlow {
+    val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (
+                events.containsAny(
+                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                    Player.EVENT_PLAYER_ERROR,
+                    Player.EVENT_IS_PLAYING_CHANGED
+                )
+            ) {
+                trySend(player.asPlaybackSessionStatus())
             }
         }
-
-        addListener(listener)
-
-        trySend(asVideoPlaybackState())
-
-        awaitClose {
-            removeListener(listener)
-        }
     }
+
+    addListener(listener)
+
+    trySend(asPlaybackSessionStatus())
+
+    awaitClose {
+        removeListener(listener)
+    }
+}
+
+private fun Player.positionFlow(): Flow<Duration> = flow {
+    while (true) {
+        emit(currentPosition.milliseconds)
+        delay(500.milliseconds)
+    }
+}

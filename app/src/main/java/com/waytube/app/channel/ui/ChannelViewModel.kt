@@ -25,7 +25,7 @@ class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
+    private val refreshSignal = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
@@ -35,7 +35,7 @@ class ChannelViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(bundleRefreshSignal) { repository.getChannel(id) }
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getChannel(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
@@ -46,27 +46,32 @@ class ChannelViewModel(
         .filterIsInstance<AsyncState.Loaded<ChannelResponse.Content>>()
         .map { it.data.videoItemsPage }
         .distinctUntilChanged()
-        .flatMapLatest { paginatedDataFlow(loadSignal = videoItemsLoadSignal, page = it) }
+        .flatMapLatest { page ->
+            paginatedDataFlow(
+                loadSignal = videoItemsLoadSignal,
+                page = page
+            )
+        }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    val bundleState = responseState
-        .flatMapLatestData { data ->
-            when (data) {
+    val modelState = responseState
+        .flatMapLatestData { response ->
+            when (response) {
                 is ChannelResponse.Content -> {
                     videoItems.map { videoItems ->
-                        ChannelBundle.Content(
-                            channel = data.channel,
+                        ChannelModel.Content(
+                            channel = response.channel,
                             videoItems = videoItems
                         )
                     }
                 }
 
                 ChannelResponse.Unavailable -> {
-                    flowOf(ChannelBundle.Unavailable)
+                    flowOf(ChannelModel.Unavailable)
                 }
             }
         }
@@ -76,11 +81,10 @@ class ChannelViewModel(
             initialValue = AsyncState.Loading
         )
 
-    fun refreshBundle() {
-        bundleRefreshSignal.tryEmit(Unit)
-    }
-
-    fun loadVideoItems() {
-        videoItemsLoadSignal.tryEmit(Unit)
+    fun handleIntent(intent: ChannelIntent) {
+        when (intent) {
+            ChannelIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            ChannelIntent.LoadVideoItems -> videoItemsLoadSignal.tryEmit(Unit)
+        }
     }
 }

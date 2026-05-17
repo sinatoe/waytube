@@ -52,9 +52,8 @@ fun PlaylistScreen(
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
-        bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
-        onRefreshBundle = viewModel::refreshBundle,
-        onFetchVideoItems = viewModel::loadVideoItems,
+        modelState = viewModel.modelState.collectAsStateWithLifecycle().value,
+        onIntent = viewModel::handleIntent,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo,
@@ -64,9 +63,8 @@ fun PlaylistScreen(
 
 @Composable
 private fun PlaylistScreenContent(
-    bundleState: AsyncState<PlaylistBundle>,
-    onRefreshBundle: () -> Unit,
-    onFetchVideoItems: () -> Unit,
+    modelState: AsyncState<PlaylistModel>,
+    onIntent: (PlaylistIntent) -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
@@ -95,30 +93,30 @@ private fun PlaylistScreenContent(
     }
 
     AsyncStateScaffold(
-        state = bundleState,
-        onRefresh = onRefreshBundle,
+        state = modelState,
+        onRefresh = { onIntent(PlaylistIntent.Refresh) },
         title = stringResource(R.string.label_playlist),
         onNavigateBack = onNavigateBack,
-        actions = { bundle ->
-            when (bundle) {
-                is PlaylistBundle.Content -> {
+        actions = { model ->
+            when (model) {
+                is PlaylistModel.Content -> {
                     MoreOptionsMenu(
                         actions = listOf(
                             MenuAction(
                                 label = stringResource(R.string.label_share),
                                 iconPainter = painterResource(R.drawable.ic_share),
-                                onClick = { onShare(bundle.playlist.url) }
+                                onClick = { onShare(model.playlist.url) }
                             )
                         )
                     )
                 }
 
-                is PlaylistBundle.Unavailable -> {}
+                is PlaylistModel.Unavailable -> {}
             }
         }
-    ) { bundle, contentPadding ->
-        when (bundle) {
-            is PlaylistBundle.Content -> {
+    ) { model, contentPadding ->
+        when (model) {
+            is PlaylistModel.Content -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding
@@ -129,14 +127,14 @@ private fun PlaylistScreenContent(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = bundle.playlist.title,
+                                text = model.playlist.title,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleLarge
                             )
 
                             Text(
-                                text = bundle.playlist.channelName,
+                                text = model.playlist.channelName,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -146,8 +144,8 @@ private fun PlaylistScreenContent(
                             Text(
                                 text = pluralStringResource(
                                     R.plurals.video_count,
-                                    bundle.playlist.videoCount.toPluralCount(),
-                                    bundle.playlist.videoCount.toCompactString()
+                                    model.playlist.videoCount.toPluralCount(),
+                                    model.playlist.videoCount.toCompactString()
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -158,8 +156,8 @@ private fun PlaylistScreenContent(
                     }
 
                     paginatedDataItems(
-                        data = bundle.videoItems,
-                        onLoad = onFetchVideoItems
+                        data = model.videoItems,
+                        onLoad = { onIntent(PlaylistIntent.LoadVideoItems) }
                     ) { item ->
                         VideoItemCard(
                             item = item,
@@ -170,7 +168,7 @@ private fun PlaylistScreenContent(
                 }
             }
 
-            PlaylistBundle.Unavailable -> {
+            PlaylistModel.Unavailable -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -195,8 +193,8 @@ private fun PlaylistScreenContent(
 private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
-            bundleState = AsyncState.Loaded(
-                data = PlaylistBundle.Content(
+            modelState = AsyncState.Loaded(
+                data = PlaylistModel.Content(
                     playlist = Playlist(
                         id = "",
                         url = "",
@@ -223,8 +221,7 @@ private fun PlaylistScreenContentPreview() {
                 ),
                 isRefreshing = false
             ),
-            onRefreshBundle = {},
-            onFetchVideoItems = {},
+            onIntent = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {},

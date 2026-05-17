@@ -56,9 +56,8 @@ fun ChannelScreen(
     onNavigateToVideo: (String) -> Unit
 ) {
     ChannelScreenContent(
-        bundleState = viewModel.bundleState.collectAsStateWithLifecycle().value,
-        onRefreshBundle = viewModel::refreshBundle,
-        onLoadVideoItems = viewModel::loadVideoItems,
+        modelState = viewModel.modelState.collectAsStateWithLifecycle().value,
+        onIntent = viewModel::handleIntent,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
         onNavigateToVideo = onNavigateToVideo
@@ -67,9 +66,8 @@ fun ChannelScreen(
 
 @Composable
 private fun ChannelScreenContent(
-    bundleState: AsyncState<ChannelBundle>,
-    onRefreshBundle: () -> Unit,
-    onLoadVideoItems: () -> Unit,
+    modelState: AsyncState<ChannelModel>,
+    onIntent: (ChannelIntent) -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit
@@ -90,30 +88,30 @@ private fun ChannelScreenContent(
     }
 
     AsyncStateScaffold(
-        state = bundleState,
-        onRefresh = onRefreshBundle,
+        state = modelState,
+        onRefresh = { onIntent(ChannelIntent.Refresh) },
         title = stringResource(R.string.label_channel),
         onNavigateBack = onNavigateBack,
-        actions = { bundle ->
-            when (bundle) {
-                is ChannelBundle.Content -> {
+        actions = { model ->
+            when (model) {
+                is ChannelModel.Content -> {
                     MoreOptionsMenu(
                         actions = listOf(
                             MenuAction(
                                 label = stringResource(R.string.label_share),
                                 iconPainter = painterResource(R.drawable.ic_share),
-                                onClick = { onShare(bundle.channel.url) }
+                                onClick = { onShare(model.channel.url) }
                             )
                         )
                     )
                 }
 
-                ChannelBundle.Unavailable -> {}
+                ChannelModel.Unavailable -> {}
             }
         }
-    ) { bundle, contentPadding ->
-        when (bundle) {
-            is ChannelBundle.Content -> {
+    ) { model, contentPadding ->
+        when (model) {
+            is ChannelModel.Content -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding
@@ -127,7 +125,7 @@ private fun ChannelScreenContent(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             StyledImage(
-                                data = bundle.channel.avatarUrl,
+                                data = model.channel.avatarUrl,
                                 modifier = Modifier
                                     .size(80.dp)
                                     .clip(CircleShape)
@@ -138,14 +136,14 @@ private fun ChannelScreenContent(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = bundle.channel.name,
+                                    text = model.channel.name,
                                     textAlign = TextAlign.Center,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleLarge
                                 )
 
-                                bundle.channel.subscriberCount?.let { subscriberCount ->
+                                model.channel.subscriberCount?.let { subscriberCount ->
                                     Text(
                                         text = pluralStringResource(
                                             R.plurals.subscriber_count,
@@ -164,8 +162,8 @@ private fun ChannelScreenContent(
                     }
 
                     paginatedDataItems(
-                        data = bundle.videoItems,
-                        onLoad = onLoadVideoItems
+                        data = model.videoItems,
+                        onLoad = { onIntent(ChannelIntent.LoadVideoItems) }
                     ) { item ->
                         VideoItemCard(
                             item = item,
@@ -176,7 +174,7 @@ private fun ChannelScreenContent(
                 }
             }
 
-            ChannelBundle.Unavailable -> {
+            ChannelModel.Unavailable -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -201,8 +199,8 @@ private fun ChannelScreenContent(
 private fun ChannelScreenContentPreview() {
     AppTheme {
         ChannelScreenContent(
-            bundleState = AsyncState.Loaded(
-                data = ChannelBundle.Content(
+            modelState = AsyncState.Loaded(
+                data = ChannelModel.Content(
                     channel = Channel(
                         id = "",
                         url = "",
@@ -229,8 +227,7 @@ private fun ChannelScreenContentPreview() {
                 ),
                 isRefreshing = false
             ),
-            onRefreshBundle = {},
-            onLoadVideoItems = {},
+            onIntent = {},
             onShare = {},
             onNavigateBack = {},
             onNavigateToVideo = {}

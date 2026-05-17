@@ -25,7 +25,7 @@ class PlaylistViewModel(
     private val id: String,
     private val repository: PlaylistRepository
 ) : ViewModel() {
-    private val bundleRefreshSignal = MutableSharedFlow<Unit>(
+    private val refreshSignal = MutableSharedFlow<Unit>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
@@ -35,7 +35,7 @@ class PlaylistViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(bundleRefreshSignal) { repository.getPlaylist(id) }
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getPlaylist(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
@@ -46,27 +46,32 @@ class PlaylistViewModel(
         .filterIsInstance<AsyncState.Loaded<PlaylistResponse.Content>>()
         .map { it.data.videoItemsPage }
         .distinctUntilChanged()
-        .flatMapLatest { paginatedDataFlow(loadSignal = videoItemsLoadSignal, page = it) }
+        .flatMapLatest { page ->
+            paginatedDataFlow(
+                loadSignal = videoItemsLoadSignal,
+                page = page
+            )
+        }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             replay = 1
         )
 
-    val bundleState = responseState
-        .flatMapLatestData { state ->
-            when (state) {
+    val modelState = responseState
+        .flatMapLatestData { response ->
+            when (response) {
                 is PlaylistResponse.Content -> {
                     videoItems.map { videoItems ->
-                        PlaylistBundle.Content(
-                            playlist = state.playlist,
+                        PlaylistModel.Content(
+                            playlist = response.playlist,
                             videoItems = videoItems
                         )
                     }
                 }
 
                 PlaylistResponse.Unavailable -> {
-                    flowOf(PlaylistBundle.Unavailable)
+                    flowOf(PlaylistModel.Unavailable)
                 }
             }
         }
@@ -76,11 +81,10 @@ class PlaylistViewModel(
             initialValue = AsyncState.Loading
         )
 
-    fun refreshBundle() {
-        bundleRefreshSignal.tryEmit(Unit)
-    }
-
-    fun loadVideoItems() {
-        videoItemsLoadSignal.tryEmit(Unit)
+    fun handleIntent(intent: PlaylistIntent) {
+        when (intent) {
+            is PlaylistIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            is PlaylistIntent.LoadVideoItems -> videoItemsLoadSignal.tryEmit(Unit)
+        }
     }
 }

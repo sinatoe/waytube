@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -72,20 +71,9 @@ fun SearchScreen(
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
 ) {
-    val textFieldState = rememberTextFieldState()
-
-    LaunchedEffect(textFieldState.text) {
-        viewModel.setSuggestionQuery(textFieldState.text.toString())
-    }
-
     SearchScreenContent(
-        textFieldState = textFieldState,
-        suggestions = viewModel.suggestions.collectAsStateWithLifecycle()::value,
-        selectedFilter = viewModel.selectedFilter.collectAsStateWithLifecycle()::value,
-        results = viewModel.results.collectAsStateWithLifecycle()::value,
-        onTrySubmit = viewModel::trySubmit,
-        onFilterClick = viewModel::toggleFilter,
-        onLoadResults = viewModel::loadResults,
+        model = viewModel.model.collectAsStateWithLifecycle().value,
+        onIntent = viewModel::handleIntent,
         onShare = LocalContext.current::shareText,
         onNavigateToVideo = onNavigateToVideo,
         onNavigateToChannel = onNavigateToChannel,
@@ -96,22 +84,24 @@ fun SearchScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchScreenContent(
-    textFieldState: TextFieldState,
-    suggestions: () -> SearchSuggestions,
-    selectedFilter: () -> SearchFilter?,
-    results: () -> PaginatedData<SearchResult>?,
-    onTrySubmit: (String) -> Boolean,
-    onFilterClick: (SearchFilter) -> Unit,
-    onLoadResults: () -> Unit,
+    model: SearchModel,
+    onIntent: (SearchIntent) -> Unit,
     onShare: (String) -> Unit,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToChannel: (String) -> Unit,
     onNavigateToPlaylist: (String) -> Unit
 ) {
+    val textFieldState = rememberTextFieldState()
     val searchBarState = rememberSearchBarState()
     val scope = rememberCoroutineScope()
 
     var selectedResult by retain { mutableStateOf<SearchResult?>(null) }
+
+    LaunchedEffect(textFieldState.text) {
+        onIntent(
+            SearchIntent.UpdateSuggestions(textFieldState.text.toString())
+        )
+    }
 
     selectedResult?.let { result ->
         ItemMenuSheet(
@@ -150,7 +140,8 @@ private fun SearchScreenContent(
             textFieldState = textFieldState,
             searchBarState = searchBarState,
             onSearch = { query ->
-                if (onTrySubmit(query)) {
+                if (query.isNotBlank()) {
+                    onIntent(SearchIntent.Submit(query))
                     scope.launch { searchBarState.animateToCollapsed() }
                 }
             },
@@ -199,38 +190,35 @@ private fun SearchScreenContent(
                 .only(WindowInsetsSides.Bottom)
                 .asPaddingValues()
         ) {
-            suggestions().run {
-                items(items) { suggestion ->
-                    ListItem(
-                        modifier = Modifier.clickable {
-                            if (onTrySubmit(suggestion)) {
-                                textFieldState.setTextAndPlaceCursorAtEnd(suggestion)
-                                scope.launch { searchBarState.animateToCollapsed() }
-                            }
-                        },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(
-                                    when (type) {
-                                        SearchSuggestions.Type.HISTORY -> R.drawable.ic_history
-                                        SearchSuggestions.Type.REMOTE -> R.drawable.ic_search
-                                    }
-                                ),
-                                contentDescription = null
-                            )
-                        },
-                        headlineContent = {
-                            Text(
-                                text = suggestion,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        colors = ListItemDefaults.colors(
-                            containerColor = Color.Transparent
+            items(model.suggestions.data) { suggestion ->
+                ListItem(
+                    modifier = Modifier.clickable {
+                        textFieldState.setTextAndPlaceCursorAtEnd(suggestion)
+                        onIntent(SearchIntent.Submit(suggestion))
+                        scope.launch { searchBarState.animateToCollapsed() }
+                    },
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(
+                                when (model.suggestions.source) {
+                                    SearchSuggestions.Source.HISTORY -> R.drawable.ic_history
+                                    SearchSuggestions.Source.REMOTE -> R.drawable.ic_search
+                                }
+                            ),
+                            contentDescription = null
                         )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = suggestion,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    colors = ListItemDefaults.colors(
+                        containerColor = Color.Transparent
                     )
-                }
+                )
             }
         }
     }
@@ -243,7 +231,7 @@ private fun SearchScreenContent(
             )
         }
     ) { contentPadding ->
-        results()?.let { results ->
+        model.results?.let { results ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding
@@ -254,11 +242,13 @@ private fun SearchScreenContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(SearchFilter.entries) { filter ->
-                            val isSelected = selectedFilter() == filter
+                            val isSelected = filter == results.selectedFilter
 
                             FilterChip(
                                 selected = isSelected,
-                                onClick = { onFilterClick(filter) },
+                                onClick = {
+                                    onIntent(SearchIntent.ToggleFilter(filter))
+                                },
                                 leadingIcon = if (isSelected) ({
                                     Icon(
                                         painter = painterResource(R.drawable.ic_check),
@@ -283,8 +273,8 @@ private fun SearchScreenContent(
                 }
 
                 paginatedDataItems(
-                    data = results,
-                    onLoad = onLoadResults
+                    data = results.data,
+                    onLoad = { onIntent(SearchIntent.LoadResults) }
                 ) { result ->
                     when (result) {
                         is SearchResult.Video -> {
@@ -322,37 +312,34 @@ private fun SearchScreenContent(
 private fun SearchScreenPreview() {
     AppTheme {
         SearchScreenContent(
-            textFieldState = rememberTextFieldState(initialText = "example query"),
-            suggestions = {
-                SearchSuggestions(
-                    items = (1..10).map { n -> "example suggestion $n" },
-                    type = SearchSuggestions.Type.HISTORY
-                )
-            },
-            selectedFilter = { SearchFilter.VIDEOS },
-            results = {
-                PaginatedData(
-                    items = (1..10).map { n ->
-                        SearchResult.Video(
-                            VideoItem.Regular(
-                                id = n.toString(),
-                                url = "",
-                                title = "Example video",
-                                channelId = "",
-                                channelName = "Example channel",
-                                thumbnailUrl = "",
-                                duration = 12.minutes + 34.seconds,
-                                viewCount = 1_234_567,
-                                uploadedAt = Clock.System.now() - 14.days
+            model = SearchModel(
+                suggestions = SearchSuggestions(
+                    data = (1..10).map { n -> "example suggestion $n" },
+                    source = SearchSuggestions.Source.HISTORY
+                ),
+                results = SearchResults(
+                    data = PaginatedData(
+                        items = (1..10).map { n ->
+                            SearchResult.Video(
+                                VideoItem.Regular(
+                                    id = n.toString(),
+                                    url = "",
+                                    title = "Example video",
+                                    channelId = "",
+                                    channelName = "Example channel",
+                                    thumbnailUrl = "",
+                                    duration = 12.minutes + 34.seconds,
+                                    viewCount = 1_234_567,
+                                    uploadedAt = Clock.System.now() - 14.days
+                                )
                             )
-                        )
-                    },
-                    state = PaginatedData.State.Done
+                        },
+                        state = PaginatedData.State.Done
+                    ),
+                    selectedFilter = SearchFilter.VIDEOS
                 )
-            },
-            onTrySubmit = { true },
-            onFilterClick = {},
-            onLoadResults = {},
+            ),
+            onIntent = {},
             onShare = {},
             onNavigateToVideo = {},
             onNavigateToChannel = {},
