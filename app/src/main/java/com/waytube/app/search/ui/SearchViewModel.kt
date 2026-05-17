@@ -15,24 +15,24 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 @Parcelize
-private data class SearchState(
+private data class SearchParams(
     val query: String,
-    val filter: SearchFilter? = null
+    val filter: SearchFilter?
 ) : Parcelable
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -43,8 +43,8 @@ class SearchViewModel(
 ) : ViewModel() {
     private val suggestionsQuery = MutableStateFlow("")
 
-    private val searchState = savedStateHandle.getMutableStateFlow<SearchState?>(
-        key = "search_state",
+    private val searchParams = savedStateHandle.getMutableStateFlow<SearchParams?>(
+        key = "search_params",
         initialValue = null
     )
 
@@ -53,89 +53,96 @@ class SearchViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    val suggestions = suggestionsQuery
-        .debounce { if (it.isNotEmpty()) REMOTE_SUGGESTIONS_DEBOUNCE else Duration.ZERO }
-        .flatMapLatest { query ->
-            if (query.isNotEmpty()) flow {
+    private val suggestions = suggestionsQuery
+        .debounce { if (it.isEmpty()) Duration.ZERO else REMOTE_SUGGESTIONS_DEBOUNCE }
+        .transformLatest { query ->
+            if (query.isNotEmpty()) {
                 emit(
-                    SearchSuggestions(
-                        items = query.takeIf { it.isNotBlank() }?.let { query ->
-                            repository.getSuggestions(query).fold(
-                                onSuccess = { it },
-                                onFailure = { null }
-                            )
-                        } ?: emptyList(),
-                        type = SearchSuggestions.Type.REMOTE
+                    SearchModel.Suggestions(
+                        data = repository.getSuggestions(query).fold(
+                            onSuccess = { it },
+                            onFailure = { emptyList() }
+                        ),
+                        source = SearchModel.Suggestions.Source.REMOTE
                     )
                 )
-            } else preferencesRepository.searchHistory.map {
-                SearchSuggestions(
-                    items = it,
-                    type = SearchSuggestions.Type.HISTORY
+            } else {
+                emitAll(
+                    preferencesRepository.searchHistory.map { history ->
+                        SearchModel.Suggestions(
+                            data = history,
+                            source = SearchModel.Suggestions.Source.HISTORY
+                        )
+                    }
                 )
             }
         }
+
+    private val results = searchParams
+        .flatMapLatest { params ->
+            params?.let { (query, filter) ->
+                paginatedDataFlow(resultsLoadSignal) { repository.getResults(query, filter) }
+                    .map { results ->
+                        SearchModel.Results(
+                            data = results,
+                            selectedFilter = filter
+                        )
+                    }
+            } ?: flowOf(null)
+        }
+
+    val model = combine(
+        suggestions,
+        results
+    ) { suggestions, results ->
+        SearchModel(
+            suggestions = suggestions,
+            results = results
+        )
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = SearchSuggestions(
-                items = emptyList(),
-                type = SearchSuggestions.Type.HISTORY
+            initialValue = SearchModel(
+                suggestions = SearchModel.Suggestions(
+                    data = emptyList(),
+                    source = SearchModel.Suggestions.Source.HISTORY
+                ),
+                results = null
             )
         )
 
-    val selectedFilter = searchState
-        .map { it?.filter }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = null
-        )
+    fun handleIntent(intent: SearchIntent) {
+        when (intent) {
+            is SearchIntent.UpdateSuggestions -> {
+                suggestionsQuery.value = intent.query
+            }
 
-    val results = searchState
-        .filterNotNull()
-        .flatMapLatest { (query, filter) ->
-            paginatedDataFlow(resultsLoadSignal) { repository.getResults(query, filter) }
+            is SearchIntent.Submit -> {
+                searchParams.update { data ->
+                    if (intent.query != data?.query) {
+                        SearchParams(
+                            query = intent.query,
+                            filter = null
+                        )
+                    } else data
+                }
+
+                viewModelScope.launch {
+                    preferencesRepository.saveSearch(intent.query)
+                }
+            }
+
+            is SearchIntent.ToggleFilter -> {
+                searchParams.update { data ->
+                    data?.copy(
+                        filter = intent.filter.takeUnless { it == data.filter }
+                    )
+                }
+            }
+
+            SearchIntent.LoadResults -> resultsLoadSignal.tryEmit(Unit)
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = null
-        )
-
-    init {
-        searchState
-            .filterNotNull()
-            .map { it.query }
-            .distinctUntilChanged()
-            .onEach(preferencesRepository::saveSearch)
-            .launchIn(viewModelScope)
-    }
-
-    fun setSuggestionQuery(query: String) {
-        suggestionsQuery.value = query
-    }
-
-    fun trySubmit(query: String): Boolean {
-        if (query.isBlank()) {
-            return false
-        }
-
-        searchState.update { state ->
-            if (state?.query != query) SearchState(query) else state
-        }
-
-        return true
-    }
-
-    fun toggleFilter(filter: SearchFilter) {
-        searchState.update { state ->
-            state?.copy(filter = filter.takeIf { state.filter != it })
-        }
-    }
-
-    fun loadResults() {
-        resultsLoadSignal.tryEmit(Unit)
     }
 
     companion object {

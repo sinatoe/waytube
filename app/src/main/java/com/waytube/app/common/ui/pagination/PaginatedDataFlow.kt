@@ -89,7 +89,7 @@ fun <T> paginatedDataFlow(
 }
 
 fun <T> paginatedDataFlow(
-    loadSignal: Flow<Unit>,
+    loadSignal: Flow<*>,
     fetch: suspend () -> FetchResult<Page<T>>
 ): Flow<PaginatedData<T>> =
     paginatedDataFlow(
