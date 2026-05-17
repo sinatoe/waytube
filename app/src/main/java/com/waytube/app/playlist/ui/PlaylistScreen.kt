@@ -52,7 +52,7 @@ fun PlaylistScreen(
     onNavigateToChannel: (String) -> Unit
 ) {
     PlaylistScreenContent(
-        bundleState = viewModel.modelState.collectAsStateWithLifecycle().value,
+        modelState = viewModel.modelState.collectAsStateWithLifecycle().value,
         onIntent = viewModel::handleIntent,
         onShare = LocalContext.current::shareText,
         onNavigateBack = onNavigateBack,
@@ -63,7 +63,7 @@ fun PlaylistScreen(
 
 @Composable
 private fun PlaylistScreenContent(
-    bundleState: AsyncState<PlaylistModel>,
+    modelState: AsyncState<PlaylistModel>,
     onIntent: (PlaylistIntent) -> Unit,
     onShare: (String) -> Unit,
     onNavigateBack: () -> Unit,
@@ -93,7 +93,7 @@ private fun PlaylistScreenContent(
     }
 
     AsyncStateScaffold(
-        state = bundleState,
+        state = modelState,
         onRefresh = { onIntent(PlaylistIntent.Refresh) },
         title = stringResource(R.string.label_playlist),
         onNavigateBack = onNavigateBack,
@@ -193,7 +193,7 @@ private fun PlaylistScreenContent(
 private fun PlaylistScreenContentPreview() {
     AppTheme {
         PlaylistScreenContent(
-            bundleState = AsyncState.Loaded(
+            modelState = AsyncState.Loaded(
                 data = PlaylistModel.Content(
                     playlist = Playlist(
                         id = "",
