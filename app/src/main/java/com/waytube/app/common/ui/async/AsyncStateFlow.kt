@@ -22,7 +22,7 @@ private sealed interface FetchEvent<out T> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T> asyncStateFlow(
-    refreshSignal: Flow<Unit>,
+    refreshSignal: Flow<*>,
     fetch: suspend () -> FetchResult<T>
 ): Flow<AsyncState<T>> =
     refreshSignal
@@ -67,7 +67,7 @@ fun <T> asyncStateFlow(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T, R> Flow<AsyncState<T>>.flatMapLatestData(
-    transform: (data: T) -> Flow<R>
+    transform: (T) -> Flow<R>
 ): Flow<AsyncState<R>> =
     flatMapLatest { state ->
         when (state) {

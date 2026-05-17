@@ -4,11 +4,11 @@ import com.waytube.app.channel.domain.Channel
 import com.waytube.app.common.domain.VideoItem
 import com.waytube.app.common.ui.pagination.PaginatedData
 
-sealed interface ChannelBundle {
+sealed interface ChannelModel {
     data class Content(
         val channel: Channel,
         val videoItems: PaginatedData<VideoItem>
-    ) : ChannelBundle
+    ) : ChannelModel
 
-    data object Unavailable : ChannelBundle
+    data object Unavailable : ChannelModel
 }

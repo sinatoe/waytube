@@ -65,12 +65,13 @@ class VideoViewModel(
             replay = 1
         )
 
-    private val skipSegmentsState = asyncStateFlow(emptyFlow()) { repository.getSkipSegments(id) }
-        .shareIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            replay = 1
-        )
+    private val skipSegmentsState =
+        asyncStateFlow(emptyFlow<Nothing>()) { repository.getSkipSegments(id) }
+            .shareIn(
+                scope = viewModelScope,
+                started = SharingStarted.Lazily,
+                replay = 1
+            )
 
     private val playbackBundle = responseState
         .filterIsInstance<AsyncState.Loaded<VideoResponse.Content>>()
