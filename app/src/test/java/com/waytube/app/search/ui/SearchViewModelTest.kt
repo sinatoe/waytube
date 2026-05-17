@@ -53,7 +53,7 @@ class SearchViewModelTest {
         val halfDebounce = SearchViewModel.REMOTE_SUGGESTIONS_DEBOUNCE / 2
 
         viewModel.model.test {
-            assertEquals(SearchModel.Suggestions.Source.HISTORY, awaitItem().suggestions.source)
+            assertEquals(SearchSuggestions.Source.HISTORY, awaitItem().suggestions.source)
 
             viewModel.handleIntent(SearchIntent.UpdateSuggestions(("a")))
             advanceTimeBy(halfDebounce)
@@ -70,13 +70,13 @@ class SearchViewModelTest {
             runCurrent()
             expectNoEvents()
 
-            assertEquals(SearchModel.Suggestions.Source.REMOTE, awaitItem().suggestions.source)
+            assertEquals(SearchSuggestions.Source.REMOTE, awaitItem().suggestions.source)
             expectNoEvents()
 
             viewModel.handleIntent(SearchIntent.UpdateSuggestions(("")))
             runCurrent()
             assertEquals(
-                SearchModel.Suggestions.Source.HISTORY,
+                SearchSuggestions.Source.HISTORY,
                 expectMostRecentItem().suggestions.source
             )
         }

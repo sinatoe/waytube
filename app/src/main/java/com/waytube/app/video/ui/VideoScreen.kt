@@ -125,17 +125,18 @@ private fun VideoPlaybackScreenContent(
         AndroidView(
             factory = { context ->
                 PlayerView(context).apply {
-                    this.player = model.player
+                    this.player = model.session.player
                 }
             },
             update = { view ->
-                view.player = model.player
+                view.player = model.session.player
             },
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    when (model.state) {
-                        VideoPlaybackState.PLAYING, VideoPlaybackState.BUFFERING -> {
+                    when (model.session.status) {
+                        VideoPlaybackSession.Status.PLAYING,
+                        VideoPlaybackSession.Status.BUFFERING -> {
                             Modifier.keepScreenOn()
                         }
 

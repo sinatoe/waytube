@@ -201,8 +201,8 @@ private fun SearchScreenContent(
                         Icon(
                             painter = painterResource(
                                 when (model.suggestions.source) {
-                                    SearchModel.Suggestions.Source.HISTORY -> R.drawable.ic_history
-                                    SearchModel.Suggestions.Source.REMOTE -> R.drawable.ic_search
+                                    SearchSuggestions.Source.HISTORY -> R.drawable.ic_history
+                                    SearchSuggestions.Source.REMOTE -> R.drawable.ic_search
                                 }
                             ),
                             contentDescription = null
@@ -313,11 +313,11 @@ private fun SearchScreenPreview() {
     AppTheme {
         SearchScreenContent(
             model = SearchModel(
-                suggestions = SearchModel.Suggestions(
+                suggestions = SearchSuggestions(
                     data = (1..10).map { n -> "example suggestion $n" },
-                    source = SearchModel.Suggestions.Source.HISTORY
+                    source = SearchSuggestions.Source.HISTORY
                 ),
-                results = SearchModel.Results(
+                results = SearchResults(
                     data = PaginatedData(
                         items = (1..10).map { n ->
                             SearchResult.Video(

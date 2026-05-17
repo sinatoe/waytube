@@ -5,18 +5,18 @@ import com.waytube.app.search.domain.SearchFilter
 import com.waytube.app.search.domain.SearchResult
 
 data class SearchModel(
-    val suggestions: Suggestions,
-    val results: Results?
-) {
-    data class Suggestions(
-        val data: List<String>,
-        val source: Source
-    ) {
-        enum class Source { HISTORY, REMOTE }
-    }
+    val suggestions: SearchSuggestions,
+    val results: SearchResults?
+)
 
-    data class Results(
-        val data: PaginatedData<SearchResult>,
-        val selectedFilter: SearchFilter?
-    )
+data class SearchSuggestions(
+    val data: List<String>,
+    val source: Source
+) {
+    enum class Source { HISTORY, REMOTE }
 }
+
+data class SearchResults(
+    val data: PaginatedData<SearchResult>,
+    val selectedFilter: SearchFilter?
+)

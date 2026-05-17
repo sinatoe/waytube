@@ -94,14 +94,14 @@ class VideoViewModel(
         }
 
     val model = responseState
-        .flatMapLatestData { state ->
-            when (state) {
+        .flatMapLatestData { response ->
+            when (response) {
                 is VideoResponse.Content -> {
-                    playbackModel.map { it ?: VideoModel.Overview(state.video) }
+                    playbackModel.map { it ?: VideoModel.Overview(response.video) }
                 }
 
                 is VideoResponse.Unavailable -> {
-                    flowOf(VideoModel.Unavailable(state.restriction))
+                    flowOf(VideoModel.Unavailable(response.restriction))
                 }
             }
         }
@@ -150,7 +150,7 @@ class VideoViewModel(
             .flatMapLatest { player ->
                 if (player != null) {
                     combine(
-                        player.videoPlaybackStateFlow(),
+                        player.playbackSessionStatusFlow(),
                         (if (video is Video.Regular) skipSegmentsState else flowOf(null))
                             .transformLatest { state ->
                                 emit(state)
@@ -175,11 +175,13 @@ class VideoViewModel(
                                     delay(500.milliseconds)
                                 }
                             }
-                    ) { state, skipSegmentsState ->
+                    ) { status, skipSegmentsState ->
                         VideoModel.Playback(
                             video = video,
-                            player = player,
-                            state = state,
+                            session = VideoPlaybackSession(
+                                player = player,
+                                status = status
+                            ),
                             skipSegmentsState = skipSegmentsState
                         )
                     }
@@ -189,15 +191,15 @@ class VideoViewModel(
             }
 }
 
-private fun Player.asVideoPlaybackState(): VideoPlaybackState =
+private fun Player.asPlaybackSessionStatus(): VideoPlaybackSession.Status =
     when {
-        playerError != null -> VideoPlaybackState.ERROR
-        playbackState == Player.STATE_BUFFERING -> VideoPlaybackState.BUFFERING
-        isPlaying -> VideoPlaybackState.PLAYING
-        else -> VideoPlaybackState.PAUSED
+        playerError != null -> VideoPlaybackSession.Status.ERROR
+        playbackState == Player.STATE_BUFFERING -> VideoPlaybackSession.Status.BUFFERING
+        isPlaying -> VideoPlaybackSession.Status.PLAYING
+        else -> VideoPlaybackSession.Status.PAUSED
     }
 
-private fun Player.videoPlaybackStateFlow(): Flow<VideoPlaybackState> =
+private fun Player.playbackSessionStatusFlow(): Flow<VideoPlaybackSession.Status> =
     callbackFlow {
         val listener = object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
@@ -208,14 +210,14 @@ private fun Player.videoPlaybackStateFlow(): Flow<VideoPlaybackState> =
                         Player.EVENT_IS_PLAYING_CHANGED
                     )
                 ) {
-                    trySend(player.asVideoPlaybackState())
+                    trySend(player.asPlaybackSessionStatus())
                 }
             }
         }
 
         addListener(listener)
 
-        trySend(asVideoPlaybackState())
+        trySend(asPlaybackSessionStatus())
 
         awaitClose {
             removeListener(listener)

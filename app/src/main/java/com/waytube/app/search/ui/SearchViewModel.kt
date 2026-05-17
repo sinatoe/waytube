@@ -58,20 +58,20 @@ class SearchViewModel(
         .transformLatest { query ->
             if (query.isNotEmpty()) {
                 emit(
-                    SearchModel.Suggestions(
+                    SearchSuggestions(
                         data = repository.getSuggestions(query).fold(
                             onSuccess = { it },
                             onFailure = { emptyList() }
                         ),
-                        source = SearchModel.Suggestions.Source.REMOTE
+                        source = SearchSuggestions.Source.REMOTE
                     )
                 )
             } else {
                 emitAll(
                     preferencesRepository.searchHistory.map { history ->
-                        SearchModel.Suggestions(
+                        SearchSuggestions(
                             data = history,
-                            source = SearchModel.Suggestions.Source.HISTORY
+                            source = SearchSuggestions.Source.HISTORY
                         )
                     }
                 )
@@ -83,7 +83,7 @@ class SearchViewModel(
             params?.let { (query, filter) ->
                 paginatedDataFlow(resultsLoadSignal) { repository.getResults(query, filter) }
                     .map { results ->
-                        SearchModel.Results(
+                        SearchResults(
                             data = results,
                             selectedFilter = filter
                         )
@@ -104,9 +104,9 @@ class SearchViewModel(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
             initialValue = SearchModel(
-                suggestions = SearchModel.Suggestions(
+                suggestions = SearchSuggestions(
                     data = emptyList(),
-                    source = SearchModel.Suggestions.Source.HISTORY
+                    source = SearchSuggestions.Source.HISTORY
                 ),
                 results = null
             )

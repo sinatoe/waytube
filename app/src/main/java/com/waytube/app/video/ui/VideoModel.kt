@@ -9,12 +9,23 @@ import com.waytube.app.video.domain.VideoRestriction
 sealed interface VideoModel {
     data class Playback(
         val video: Video,
-        val player: Player,
-        val state: VideoPlaybackState,
+        val session: VideoPlaybackSession,
         val skipSegmentsState: AsyncState<List<SkipSegment>>?
     ) : VideoModel
 
     data class Overview(val video: Video) : VideoModel
 
     data class Unavailable(val restriction: VideoRestriction?) : VideoModel
+}
+
+data class VideoPlaybackSession(
+    val player: Player,
+    val status: Status
+) {
+    enum class Status {
+        BUFFERING,
+        ERROR,
+        PLAYING,
+        PAUSED
+    }
 }
