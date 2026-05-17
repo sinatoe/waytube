@@ -66,7 +66,7 @@ fun VideoScreen(
 ) {
     val scrollState = rememberScrollState()
 
-    when (val modelState = viewModel.model.collectAsStateWithLifecycle().value) {
+    when (val modelState = viewModel.modelState.collectAsStateWithLifecycle().value) {
         is AsyncState.Loaded if (modelState.data is VideoModel.Playback) -> {
             val view = LocalView.current
             val activity = LocalActivity.current
