@@ -25,14 +25,17 @@ class PlaylistViewModel(
     private val id: String,
     private val repository: PlaylistRepository
 ) : ViewModel() {
-    private val intentSignal = MutableSharedFlow<PlaylistIntent>(
-        extraBufferCapacity = 64,
+    private val refreshSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(
-        intentSignal.filterIsInstance<PlaylistIntent.Refresh>()
-    ) { repository.getPlaylist(id) }
+    private val videoItemsLoadSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getPlaylist(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
@@ -45,7 +48,7 @@ class PlaylistViewModel(
         .distinctUntilChanged()
         .flatMapLatest { page ->
             paginatedDataFlow(
-                loadSignal = intentSignal.filterIsInstance<PlaylistIntent.LoadVideoItems>(),
+                loadSignal = videoItemsLoadSignal,
                 page = page
             )
         }
@@ -79,6 +82,9 @@ class PlaylistViewModel(
         )
 
     fun handleIntent(intent: PlaylistIntent) {
-        intentSignal.tryEmit(intent)
+        when (intent) {
+            is PlaylistIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            is PlaylistIntent.LoadVideoItems -> videoItemsLoadSignal.tryEmit(Unit)
+        }
     }
 }

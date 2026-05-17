@@ -25,14 +25,17 @@ class ChannelViewModel(
     private val id: String,
     private val repository: ChannelRepository
 ) : ViewModel() {
-    private val intentSignal = MutableSharedFlow<ChannelIntent>(
-        extraBufferCapacity = 64,
+    private val refreshSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val responseState = asyncStateFlow(
-        intentSignal.filterIsInstance<ChannelIntent.Refresh>()
-    ) { repository.getChannel(id) }
+    private val videoItemsLoadSignal = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    private val responseState = asyncStateFlow(refreshSignal) { repository.getChannel(id) }
         .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
@@ -45,7 +48,7 @@ class ChannelViewModel(
         .distinctUntilChanged()
         .flatMapLatest { page ->
             paginatedDataFlow(
-                loadSignal = intentSignal.filterIsInstance<ChannelIntent.LoadVideoItems>(),
+                loadSignal = videoItemsLoadSignal,
                 page = page
             )
         }
@@ -79,6 +82,9 @@ class ChannelViewModel(
         )
 
     fun handleIntent(intent: ChannelIntent) {
-        intentSignal.tryEmit(intent)
+        when (intent) {
+            ChannelIntent.Refresh -> refreshSignal.tryEmit(Unit)
+            ChannelIntent.LoadVideoItems -> videoItemsLoadSignal.tryEmit(Unit)
+        }
     }
 }
