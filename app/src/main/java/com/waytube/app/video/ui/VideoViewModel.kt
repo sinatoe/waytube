@@ -12,6 +12,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import com.waytube.app.common.ui.async.AsyncState
 import com.waytube.app.common.ui.async.asyncStateFlow
+import com.waytube.app.common.ui.async.flatMapLatestData
 import com.waytube.app.playback.ui.PlaybackManager
 import com.waytube.app.video.domain.Video
 import com.waytube.app.video.domain.VideoRepository
@@ -25,12 +26,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.transformWhile
@@ -54,41 +58,51 @@ class VideoViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private val skipSegmentsState = asyncStateFlow(
-        refreshSignal = emptyFlow(),
-        fetch = { repository.getSkipSegments(id) }
-    ) { flowOf(it) }
-        .stateIn(
+    private val responseState = asyncStateFlow(bundleRefreshSignal) { repository.getVideo(id) }
+        .shareIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
-            initialValue = AsyncState.Loading
+            replay = 1
         )
 
-    val bundleState = asyncStateFlow(
-        refreshSignal = bundleRefreshSignal,
-        fetch = { repository.getVideo(id) }
-    ) { response ->
-        when (response) {
-            is VideoResponse.Content -> {
+    private val skipSegmentsState = asyncStateFlow(emptyFlow()) { repository.getSkipSegments(id) }
+        .shareIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            replay = 1
+        )
+
+    private val playbackBundle = responseState
+        .filterIsInstance<AsyncState.Loaded<VideoResponse.Content>>()
+        .distinctUntilChanged()
+        .flatMapLatest { state ->
+            if (!state.isRefreshing) {
                 isPlaybackRequested
                     .onStart { emit(false) }
                     .flatMapLatest { isRequested ->
                         if (isRequested) {
-                            requestPlaybackBundle(response.video)
+                            requestPlaybackBundle(state.data.video)
                         } else {
                             flowOf(null)
                         }
                     }
-                    .map { bundle ->
-                        bundle ?: VideoBundle.Overview(response.video)
-                    }
-            }
-
-            is VideoResponse.Unavailable -> {
-                flowOf(VideoBundle.Unavailable(response.restriction))
+            } else {
+                flowOf(null)
             }
         }
-    }
+
+    val bundleState = responseState
+        .flatMapLatestData { state ->
+            when (state) {
+                is VideoResponse.Content -> {
+                    playbackBundle.map { it ?: VideoBundle.Overview(state.video) }
+                }
+
+                is VideoResponse.Unavailable -> {
+                    flowOf(VideoBundle.Unavailable(state.restriction))
+                }
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Lazily,
