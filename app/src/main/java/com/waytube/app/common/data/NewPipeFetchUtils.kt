@@ -5,7 +5,7 @@ import com.waytube.app.common.domain.FetchResult
 import com.waytube.app.common.domain.Identifiable
 import com.waytube.app.common.domain.Page
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException
@@ -13,7 +13,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 suspend fun <T> fetch(block: () -> T): FetchResult<T> =
-    withContext(Dispatchers.IO) {
+    runInterruptible(Dispatchers.IO) {
         try {
             FetchResult.Success(block())
         } catch (e: Throwable) {
