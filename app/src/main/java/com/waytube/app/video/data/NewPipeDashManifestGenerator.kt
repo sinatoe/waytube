@@ -10,6 +10,10 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.io.encoding.Base64
 
 fun StreamInfo.generateDashManifestUrl(): String {
+    if (videoOnlyStreams.isEmpty() || audioStreams.isEmpty()) {
+        error("Missing adaptive streams")
+    }
+
     val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
 
     val mpdElement = document.createElement("MPD")
